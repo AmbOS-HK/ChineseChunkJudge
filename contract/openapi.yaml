@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ChineseChunkJudge Adjudication API
-  version: 0.1.0
+  version: 0.2.0
   description: >-
     切片判定服务的 HTTP 契约。请求与响应结构引用 contract/schema 下的 JSON Schema，
     与 contract/rules.md 同属权威标准。参考实现为进程内库，本契约用于跨语言一致性验证。
@@ -74,6 +74,26 @@ paths:
                 $ref: './schema/judge-report.json'
         '400':
           $ref: '#/components/responses/BadRequest'
+  /packages/parent-child:
+    post:
+      tags: [judge]
+      operationId: buildParentChildPackage
+      summary: 生成双库独立产物包（上下文父块 + 父子配对），与判定报告解耦
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PackageRequest'
+      responses:
+        '200':
+          description: 父子产物包
+          content:
+            application/json:
+              schema:
+                $ref: './schema/parent-child-package.json'
+        '400':
+          $ref: '#/components/responses/BadRequest'
   /judge/execute:
     post:
       tags: [judge]
@@ -122,6 +142,15 @@ components:
           type: array
           items:
             $ref: './schema/raw-chunk.json'
+        parentChunks:
+          type: array
+          description: 可选，双库上下文父块；parentChild.enabled=false 时不得携带（CCJ-013）。
+          items:
+            $ref: './schema/parent-child-package.json#/$defs/contextParentChunk'
+        pairs:
+          type: array
+          items:
+            $ref: './schema/parent-child-package.json#/$defs/contextParentChildPair'
     JudgeRequest:
       type: object
       additionalProperties: false
@@ -135,6 +164,35 @@ components:
           type: array
           items:
             $ref: './schema/raw-chunk.json'
+        parentChunks:
+          type: array
+          items:
+            $ref: './schema/parent-child-package.json#/$defs/contextParentChunk'
+        pairs:
+          type: array
+          items:
+            $ref: './schema/parent-child-package.json#/$defs/contextParentChildPair'
+    PackageRequest:
+      type: object
+      additionalProperties: false
+      required: [document, options, rawChunks, parentChunks, pairs]
+      properties:
+        document:
+          $ref: './schema/document-feature.json'
+        options:
+          $ref: './schema/chunk-strategy-options.json'
+        rawChunks:
+          type: array
+          items:
+            $ref: './schema/raw-chunk.json'
+        parentChunks:
+          type: array
+          items:
+            $ref: './schema/parent-child-package.json#/$defs/contextParentChunk'
+        pairs:
+          type: array
+          items:
+            $ref: './schema/parent-child-package.json#/$defs/contextParentChildPair'
     ExecuteRequest:
       type: object
       additionalProperties: false

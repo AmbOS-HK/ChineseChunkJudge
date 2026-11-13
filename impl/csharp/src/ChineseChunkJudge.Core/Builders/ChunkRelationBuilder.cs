@@ -29,7 +29,8 @@ public sealed class ChunkRelationBuilder
                 {
                     PreviousChunkId = previous,
                     NextChunkId = next,
-                    ParentChunkId = parent
+                    ParentChunkId = parent,
+                    StructuralParentChunkId = parent
                 }
             });
         }
@@ -42,6 +43,11 @@ public sealed class ChunkRelationBuilder
         if (!string.IsNullOrWhiteSpace(chunk.Relations.ParentChunkId))
         {
             return chunk.Relations.ParentChunkId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(chunk.Relations.StructuralParentChunkId))
+        {
+            return chunk.Relations.StructuralParentChunkId;
         }
 
         bool isHeading = IsHeading(chunk);

@@ -36,14 +36,33 @@ public sealed class ChunkValidator
         IReadOnlyList<ContractChunk> chunks,
         ChunkStrategyOptions? options = null)
     {
+        return Validate(document, chunks, options, [], []);
+    }
+
+    /// <param name="document">输入文档，提供正文基线与元信息基线。</param>
+    /// <param name="chunks">待校验的契约切片（子块）。</param>
+    /// <param name="options">策略选项，传入后才执行 CCJ-007。</param>
+    /// <param name="parentChunks">双库上下文父块集合。</param>
+    /// <param name="pairs">父子配对集合。</param>
+    public ChunkValidationResult Validate(
+        DocumentFeature document,
+        IReadOnlyList<ContractChunk> chunks,
+        ChunkStrategyOptions? options,
+        IReadOnlyList<ContextParentChunk> parentChunks,
+        IReadOnlyList<ContextParentChildPair> pairs)
+    {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(chunks);
+        ArgumentNullException.ThrowIfNull(parentChunks);
+        ArgumentNullException.ThrowIfNull(pairs);
 
         var issues = RuleEngine.Evaluate(new ChunkValidationContext
         {
             Document = document,
             Chunks = chunks,
-            Options = options
+            Options = options,
+            ParentChunks = parentChunks,
+            Pairs = pairs
         });
 
         return new ChunkValidationResult { Issues = issues };

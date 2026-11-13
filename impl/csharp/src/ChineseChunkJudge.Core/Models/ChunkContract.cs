@@ -14,8 +14,11 @@ public static class ContractConstants
     /// <summary>策略名校验正则：{type}@{targetSize}。</summary>
     public const string StrategyNamePattern = @"^[a-z][a-z0-9_-]*@[1-9][0-9]*$";
 
-    /// <summary>契约版本号。</summary>
-    public const string ContractVersion = "0.1.0";
+    /// <summary>契约版本号，与 contract/rules.md 表头一致。</summary>
+    public const string ContractVersion = "0.2.0";
+
+    /// <summary>父块长度告警阈值的临时调试默认值，非标准基准；正式值由样本 P95 标定。</summary>
+    public const int ParentMaxCharsDebugDefault = 6000;
 
     /// <summary>标题单元的 unitKind 取值，关系构建依赖该值。</summary>
     public const string HeadingUnitKind = "heading";
@@ -118,6 +121,9 @@ public sealed record ChunkStrategyOptions
 
     public IReadOnlyDictionary<string, string>? Extensions { get; init; }
 
+    /// <summary>双库配置，缺省为关闭。</summary>
+    public ParentChildOptions? ParentChild { get; init; }
+
     /// <summary>契约策略名：{type}@{targetSize}。</summary>
     public string StrategyName => $"{StrategyType}@{TargetSize}";
 }
@@ -151,7 +157,14 @@ public sealed record ChunkRelations
 
     public string? NextChunkId { get; init; }
 
+    /// <summary>deprecated，1.0.0 移除；语义等同 StructuralParentChunkId，二者同现值必须一致（CCJ-014）。</summary>
     public string? ParentChunkId { get; init; }
+
+    /// <summary>结构父：文档大纲层级的最近前序 heading 父块。</summary>
+    public string? StructuralParentChunkId { get; init; }
+
+    /// <summary>上下文父：双库模式下归属的 contextParent；双库关闭时不得出现（CCJ-013）。</summary>
+    public string? ContextParentChunkId { get; init; }
 }
 
 /// <summary>已补齐元信息、字符计数与关系指针的契约切片，是判定的直接对象。</summary>
@@ -224,6 +237,18 @@ public sealed record ChunkReportSummary
     public required int EmptyChunkCount { get; init; }
 
     public required int OversizedChunkCount { get; init; }
+
+    public int ParentChunkCount { get; init; }
+
+    public int ChildWithParentCount { get; init; }
+
+    /// <summary>childWithParentCount / 子块总数；无子块时为 0。</summary>
+    public double ParentCoverageRatio { get; init; }
+
+    public int ParentCharP95 { get; init; }
+
+    /// <summary>超过 parentMaxChars 的父块数量，与 OversizedChunkCount 独立累加。</summary>
+    public int OversizedParentChunkCount { get; init; }
 }
 
 /// <summary>报告中的生效规则描述。</summary>

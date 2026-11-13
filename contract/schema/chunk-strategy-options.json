@@ -43,6 +43,23 @@
       "additionalProperties": {
         "type": "string"
       }
+    },
+    "parentChild": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "双库（Parent/Child）配置。enabled 为强布尔：关闭即本批次不得产出父块相关字段。",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "parentMaxChars": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 6000,
+          "description": "父块长度告警阈值配置项，非上限；6000 为临时调试默认值，正式基准由不少于 50 份目标业务文档父块长度 P95 标定。契约不设全局硬封顶。"
+        }
+      }
     }
   }
 }

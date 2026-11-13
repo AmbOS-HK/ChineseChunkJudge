@@ -14,6 +14,13 @@ public static class ChunkRuleIds
     public const string OffsetConsistency = "CCJ-005";
     public const string Overlap = "CCJ-006";
     public const string InvalidOptions = "CCJ-007";
+    public const string ParentChildPairStructure = "CCJ-008";
+    public const string ParentOversized = "CCJ-009";
+    public const string ParentCoverage = "CCJ-010";
+    public const string ParentReferenceCycle = "CCJ-011";
+    public const string ChildWithinParent = "CCJ-012";
+    public const string ParentChildDisabled = "CCJ-013";
+    public const string ParentAliasConsistency = "CCJ-014";
 }
 
 /// <summary>规则求值上下文。</summary>
@@ -24,6 +31,12 @@ public sealed record ChunkValidationContext
     public required IReadOnlyList<ContractChunk> Chunks { get; init; }
 
     public ChunkStrategyOptions? Options { get; init; }
+
+    /// <summary>双库上下文父块集合，无双库产物时为空。</summary>
+    public IReadOnlyList<ContextParentChunk> ParentChunks { get; init; } = [];
+
+    /// <summary>父子配对集合，无双库产物时为空。</summary>
+    public IReadOnlyList<ContextParentChildPair> Pairs { get; init; } = [];
 }
 
 /// <summary>扩展点：一条判定规则。</summary>
@@ -348,6 +361,11 @@ public sealed class InvalidOptionsRule : IChunkRule
         {
             yield return CreateIssue("overlap", options.Overlap, $"0..{Math.Max(options.TargetSize - 1, 0)}");
         }
+
+        if (options.ParentChild is { } parentChild && parentChild.ParentMaxChars < 1)
+        {
+            yield return CreateIssue("parentMaxChars", parentChild.ParentMaxChars, ">= 1");
+        }
     }
 
     private ChunkIssue CreateIssue(string name, int value, string expected)
@@ -403,12 +421,19 @@ public sealed class ChunkRuleEngine
         ChunkRuleIds.OversizedChunk,
         ChunkRuleIds.OffsetConsistency,
         ChunkRuleIds.Overlap,
-        ChunkRuleIds.InvalidOptions
+        ChunkRuleIds.InvalidOptions,
+        ChunkRuleIds.ParentChildPairStructure,
+        ChunkRuleIds.ParentOversized,
+        ChunkRuleIds.ParentCoverage,
+        ChunkRuleIds.ParentReferenceCycle,
+        ChunkRuleIds.ChildWithinParent,
+        ChunkRuleIds.ParentChildDisabled,
+        ChunkRuleIds.ParentAliasConsistency
     };
 
     public IReadOnlyList<IChunkRule> Rules => _rules;
 
-    /// <summary>构造契约规定的七条基础规则。</summary>
+    /// <summary>构造契约规定的十四条基础规则。</summary>
     public static IReadOnlyList<IChunkRule> CreateDefaultRules() =>
     [
         new MetadataCompletenessRule(),
@@ -417,7 +442,14 @@ public sealed class ChunkRuleEngine
         new OversizedChunkRule(),
         new OffsetConsistencyRule(),
         new OverlapRule(),
-        new InvalidOptionsRule()
+        new InvalidOptionsRule(),
+        new ParentChildPairStructureRule(),
+        new ParentOversizedRule(),
+        new ParentCoverageRule(),
+        new ParentReferenceCycleRule(),
+        new ChildWithinParentRule(),
+        new ParentChildDisabledRule(),
+        new ParentAliasConsistencyRule()
     ];
 
     /// <summary>注册扩展规则。编号必须唯一，扩展规则不得声明为基础规则。</summary>

@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chunkjudge.ambos.cn/schema/parent-child-package.json",
+  "title": "ParentChildPackage",
+  "description": "双库独立产物包：全部上下文父块 + 父子关联映射。与 JudgeReport 解耦。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["documentId", "strategy", "generatedAt", "parentChunks", "pairs"],
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*@[1-9][0-9]*$"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "parentChunks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/contextParentChunk"
+      }
+    },
+    "pairs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/contextParentChildPair"
+      }
+    }
+  },
+  "$defs": {
+    "contextParentChunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "上下文父块：取自原文区间，互不重叠，集合对原文做完整无重叠划分。",
+      "required": [
+        "parentChunkId",
+        "index",
+        "text",
+        "startOffset",
+        "endOffset",
+        "strategy",
+        "metadata",
+        "charCount"
+      ],
+      "properties": {
+        "parentChunkId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "text": {
+          "type": "string"
+        },
+        "startOffset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "endOffset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "strategy": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*@[1-9][0-9]*$"
+        },
+        "metadata": {
+          "$ref": "./document-feature.json#/$defs/documentMetadata"
+        },
+        "charCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Unicode 码位数量。"
+        },
+        "startsAtUnitBoundary": {
+          "type": "boolean",
+          "default": true
+        },
+        "endsAtUnitBoundary": {
+          "type": "boolean",
+          "default": true
+        },
+        "relatedContextParentIds": {
+          "type": "array",
+          "description": "跨父块显式引用，替代文本重叠；ID 必须可解析，禁止自引用与成环（CCJ-011）。",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "contextParentChildPair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contextParentChunkId", "childChunkIds"],
+      "properties": {
+        "contextParentChunkId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "childChunkIds": {
+          "type": "array",
+          "description": "非空；1:N 为主，1:1 为合法边界，不告警。",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

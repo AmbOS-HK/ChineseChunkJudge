@@ -1,8 +1,13 @@
 # ChineseChunkJudge
 
-> 语言无关的文本切片（chunking）判定契约规范，附带 .NET 10 / C# 参考实现。
+中文名称：中文切片判定框架
 
-ChineseChunkJudge 不是一个切片器，而是一套**切片判定契约**：它规定一份文档被切片之后，产出的切片必须满足哪些结构、元信息与边界约束，并输出一份可复现的判定报告（JudgeReport）。任何语言的切片实现，只要按本契约产出数据结构，就能被同一套规则判定，并被同一评测工具（ChunkJudgeBench）横向比较。
+> 本项目不是一个新的 chunk 算法库，而是一套面向 Word / PDF / HTML 载体下中文专业文档（政府报告、工程报告、项目报告、司法鉴定、合同协议、规范、法规等）的「切片分流规范 + 质检判定 + 双库父子块配套契约」，可对接任意底层切分器（包括 Chatchat、HanLP 等）。
+
+名称释义：
+- Chinese：面向中文专业文档；
+- Chunk：RAG 文本切片；
+- Judge：负责策略路由、切片质检、合规判定。
 
 ## 仓库结构
 
@@ -11,6 +16,12 @@ ChineseChunkJudge/
 ├─ README.md
 ├─ LICENSE
 ├─ .gitignore
+├─ docs/                              # 规划文档，非标准
+│  ├─ 00-定位与边界.md
+│  ├─ 01-术语表.md
+│  ├─ 02-契约演进.md
+│  ├─ 03-实现矩阵.md
+│  └─ 04-对外文案口径.md
 ├─ contract/                          # 权威标准，先改这里
 │  ├─ rules.md                        # 判定规则正文
 │  ├─ openapi.yaml                    # 判定服务 HTTP 契约（OpenAPI 3.1）
@@ -19,24 +30,34 @@ ChineseChunkJudge/
 │     ├─ chunk-strategy-options.json  # 策略选项
 │     ├─ raw-chunk.json               # 原始切片
 │     ├─ contract-chunk.json          # 契约切片
-│     └─ judge-report.json            # 判定报告
+│     ├─ judge-report.json            # 判定报告
+│     └─ parent-child-package.json    # 双库产物包（0.2.0 新增）
 └─ impl/
-   └─ csharp/                         # 第一个参考实现（net10.0）
-      ├─ ChineseChunkJudge.sln
-      ├─ src/ChineseChunkJudge.Core/
-      │  ├─ Abstractions/IChunkExecutor.cs
-      │  ├─ Models/ChunkContract.cs
-      │  ├─ RuleEngine/ChunkRuleEngine.cs
-      │  ├─ Validators/ChunkValidator.cs
-      │  ├─ Builders/ChunkRelationBuilder.cs
-      │  ├─ ChunkJudgeService.cs
-      │  └─ ChineseChunkJudge.Core.csproj
-      ├─ tests/ChineseChunkJudge.Core.Tests/
-      │  ├─ ChunkValidatorTests.cs
-      │  └─ ChineseChunkJudge.Core.Tests.csproj
-      └─ samples/DemoConsoleApp/
-         ├─ Program.cs
-         └─ DemoConsoleApp.csproj
+   ├─ csharp/                         # 首个参考实现（net10.0），已实现
+   │  ├─ ChineseChunkJudge.sln
+   │  ├─ src/ChineseChunkJudge.Core/
+   │  │  ├─ Abstractions/IChunkExecutor.cs
+   │  │  ├─ Models/ChunkContract.cs
+   │  │  ├─ Models/ParentChildContract.cs
+   │  │  ├─ RuleEngine/ChunkRuleEngine.cs
+   │  │  ├─ RuleEngine/ParentChildRules.cs
+   │  │  ├─ Validators/ChunkValidator.cs
+   │  │  ├─ Builders/ChunkRelationBuilder.cs
+   │  │  ├─ ChunkJudgeService.cs
+   │  │  └─ ChineseChunkJudge.Core.csproj
+   │  ├─ tests/ChineseChunkJudge.Core.Tests/
+   │  │  ├─ ChunkValidatorTests.cs
+   │  │  ├─ ParentChildRulesTests.cs
+   │  │  └─ ChineseChunkJudge.Core.Tests.csproj
+   │  └─ samples/DemoConsoleApp/
+   │     ├─ Program.cs
+   │     └─ DemoConsoleApp.csproj
+   ├─ go/                             # 占位，未实现（规划：高性能服务版）
+   │  └─ README.md
+   ├─ python/                         # 占位，未实现（规划：与 ChunkJudgeBench 联动）
+   │  └─ README.md
+   └─ rust/                           # 占位，未实现（规划：极致性能）
+      └─ README.md
 ```
 
 ## 契约优先
@@ -47,13 +68,19 @@ ChineseChunkJudge/
 | --- | --- |
 | `contract/rules.md` | 术语、元信息、策略命名、规则编号与级别、报告结构、变更流程 |
 | `contract/openapi.yaml` | 判定服务 HTTP 接口（`/rules`、`/chunks/normalize`、`/judge`、`/judge/execute`） |
-| `contract/schema/*.json` | 五类数据结构的 JSON Schema（2020-12） |
+| `contract/schema/*.json` | 六类数据结构的 JSON Schema（2020-12），含双库产物包 |
 
 修改顺序固定：**先改 `contract/`，再同步 `impl/`**。参考实现不得私自增删契约核心字段，也不得删除或降级基础校验规则。
 
+当前契约版本 **0.2.0**：基础规则 CCJ-001..CCJ-014；新增双库（Parent/Child）可选产物 `ParentChildPackage`（默认关闭）、`structuralParentChunkId` / `contextParentChunkId` 两个独立父指针，旧字段 `parentChunkId` 标记弃用并保留至 1.0.0。C# 参考实现已同步，`dotnet build` 0 警告 0 错误、24 项单元测试全部通过（2026-11-13）。
+
 ## 参考实现
 
-`impl/csharp` 是唯一的参考实现，目标框架 `net10.0`：
+`impl/csharp` 是首个参考实现，目标框架 `net10.0`。契约与语言无关：任何语言实现，只要输入输出符合 `contract/schema/*.json` 与 `contract/openapi.yaml`，即属同一契约下的实现，按规划可继续补 Go / Python / Rust 参考实现。
+
+`impl/go`、`impl/python`、`impl/rust` 目前为占位目录，每个目录只有一份 `README.md` 说明定位与落地约束，无源码、无构建文件、未纳入构建与测试流程。
+
+下表为 C# 参考实现的组件构成：
 
 | 组件 | 职责 |
 | --- | --- |
@@ -95,7 +122,7 @@ Demo 会输出一份 `structure@600` 的样例 JudgeReport JSON；策略类型�
 2. **质检强制规则**：单块上限 1500 字符告警（CCJ-004）、空切片告警（CCJ-003）；可扩展校验，不可删除基础校验。
 3. **策略命名**：`{type}@{targetSize}`，如 `structure@600`、`sentence@900`；基线由 ChunkJudgeBench 产出。
 4. **编码**：全仓库 UTF-8。
-5. **单一参考实现**：当前只做 C#，不新增其他语言的参考实现。
+5. **契约语言无关，实现可扩展**：`impl/csharp` 为首个参考实现；任何语言实现只要输入输出符合 `contract/schema/*.json` 与 `contract/openapi.yaml`，即属同一契约下的实现（规划：C# / Go / Python / Rust），各实现不得增删契约核心字段、不得降级基础规则。
 6. **算法外置**：本仓库（含 samples）不交付切分算法与文档解析器，执行器由外部插件实现 `IChunkExecutor` 注入。
 
 ## 许可

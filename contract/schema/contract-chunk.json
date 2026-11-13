@@ -85,7 +85,15 @@
         },
         "parentChunkId": {
           "type": ["string", "null"],
-          "description": "最近的前序 heading 块；heading 块指向层级更浅的前序 heading 块。"
+          "description": "deprecated，1.0.0 移除。最近的前序 heading 块；heading 块指向层级更浅的前序 heading 块。语义等同 structuralParentChunkId，二者同现时值必须一致（CCJ-014）。"
+        },
+        "structuralParentChunkId": {
+          "type": ["string", "null"],
+          "description": "结构父：文档大纲层级的最近前序 heading 父块。"
+        },
+        "contextParentChunkId": {
+          "type": ["string", "null"],
+          "description": "上下文父：双库模式下归属的 contextParent。parentChild.enabled=false 时不得出现（CCJ-013）。"
         }
       }
     }

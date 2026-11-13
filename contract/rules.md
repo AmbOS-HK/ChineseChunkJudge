@@ -2,7 +2,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| 契约版本 | 0.1.1 |
+| 契约版本 | 0.2.0 |
 | 状态 | 生效 |
 | 权威文件 | 本文件 + `contract/openapi.yaml` + `contract/schema/*.json` |
 | 适用范围 | 任意语言、任意实现产出的文本切片结果 |
@@ -32,6 +32,10 @@ ChineseChunkJudge 判定的是「切片结果是否符合契约」，不判定�
 | 判定报告 JudgeReport | 一次判定的完整结果：摘要 + 问题清单 + 生效规则 |
 | 策略名 strategy | `{type}@{targetSize}`，例如 `structure@600` |
 | 基础规则 base rule | 契约强制生效、任何实现不得删除的规则 |
+| 结构父 structuralParentChunkId | 文档大纲层级的最近前序 heading 父块，即旧字段 `parentChunkId` 的语义 |
+| 上下文父块 contextParent | 双库模式下与子块配对、供下游拼接上下文的粗粒度块；取自原文区间，互不重叠 |
+| 父子配对 ContextParentChildPair | `contextParentChunkId` + `childChunkIds[]`，1:N 为主、1:1 合法 |
+| 父子产物包 ParentChildPackage | 独立输出产物：全部上下文父块 + 父子关联映射，与 `JudgeReport` 解耦 |
 | 字符数 charCount | 文本的 Unicode 码位（code point）总数 |
 
 ## 3. 数据流转
@@ -47,6 +51,10 @@ DocumentFeature + ChunkStrategyOptions
         │
         └─ 汇总 ──────────────────────────► JudgeReport
 ```
+
+双库模式（`parentChild.enabled=true`）下另产出 **`ParentChildPackage`**：全部上下文父块 + 父子关联映射。`JudgeReport` 只承载判定结论、告警与规则检查结果，不承载父块集合，二者解耦，实现方可只消费报告或同时消费产物包。
+
+双库模式的数据流约束：**先按结构单元划分上下文父块，再在父块区间内切子块**（先父后子）。实现仍归外部执行器，本契约只约束产出物结构。由此可推出：双库模式下子块区间天然互不重叠，CCJ-006 应恒不触发；一旦触发即说明上游未遵守该数据流。
 
 ### 3.1 执行器插件边界（强制）
 
@@ -123,6 +131,18 @@ strategy = {type}@{targetSize}
 | 保留结构 | `preserveStructure` | boolean | 否 | true | 是否按结构单元切分 |
 | 重叠字符数 | `overlap` | integer | 否 | 0 | 0..targetSize-1 |
 | 扩展参数 | `extensions` | object | 否 | — | string→string，实现自行解释，不得改变本契约字段语义 |
+| 双库开关与父块阈值 | `parentChild` | object | 否 | 见下 | 双库（Parent/Child）配置，见 5.3 |
+
+### 5.3 parentChild（双库配置）
+
+| 字段 | JSON 名 | 类型 | 必填 | 默认 | 说明 |
+| --- | --- | --- | --- | --- | --- |
+| 是否启用 | `enabled` | boolean | 否 | `false` | 强布尔：关闭即本批次不得产出父块相关字段 |
+| 父块长度告警阈值 | `parentMaxChars` | integer | 否 | 6000（**临时调试值，非标准基准**） | 正整数；契约**不设全局硬封顶常量**；正式基准由 ≥50 份目标业务文档父块长度 P95 标定 |
+
+- `parentMaxChars` 是**告警阈值配置项**，不是上限：CCJ-009 仅产生告警，不阻塞输出。
+- 正式基准值由 ChunkJudgeBench 统计输出（P50/P90/P95/P99）后回填；在样本测算完成前，6000 仅用于本地调试，不纳入正式基线。
+- 部署侧可自行追加上限，但不属于本契约。
 
 策略名由 `strategyType` 与 `targetSize` 拼接得出，不单独传入。选项非法触发 **CCJ-007**。
 
@@ -167,9 +187,56 @@ strategy = {type}@{targetSize}
 | --- | --- | --- | --- |
 | 前一块 | `previousChunkId` | string \| null | 按 `index` 顺序的前一个切片 |
 | 后一块 | `nextChunkId` | string \| null | 按 `index` 顺序的后一个切片 |
-| 父块 | `parentChunkId` | string \| null | 见下 |
+| 结构父（旧名，弃用） | `parentChunkId` | string \| null | **deprecated**，1.0.0 移除；语义等同 `structuralParentChunkId` |
+| 结构父 | `structuralParentChunkId` | string \| null | 文档大纲层级的最近前序 heading 父块，见下 |
+| 上下文父 | `contextParentChunkId` | string \| null | 双库模式下归属的上下文父块；`parentChild.enabled=false` 时不得出现 |
 
-父块语义：普通块指向**最近的前序 heading 块**；heading 块自身指向**层级更浅的最近前序 heading 块**。调用方已显式指定 `parentChunkId` 时保留原值，不覆盖。
+结构父语义：普通块指向**最近的前序 heading 块**；heading 块自身指向**层级更浅的最近前序 heading 块**。调用方已显式指定时保留原值，不覆盖。
+
+别名一致性：`parentChunkId` 与 `structuralParentChunkId` 同时出现时值必须一致，不一致触发 **CCJ-014**（warning）。0.2.0 只增不删，`parentChunkId` 保留以兼容现有消费方。
+
+### 7.2 上下文父块 ContextParentChunk
+
+| 字段 | JSON 名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- | --- |
+| 父块标识 | `parentChunkId` | string | 是 | 全文档唯一，建议 `{strategy}#p{index}` |
+| 序号 | `index` | integer | 是 | 从 0 起连续 |
+| 正文 | `text` | string | 是 | 必须为原文精确子串，不得改写 |
+| 起始偏移 | `startOffset` | integer | 是 | 见第 11 节 |
+| 结束偏移 | `endOffset` | integer | 是 | 开区间 |
+| 策略名 | `strategy` | string | 是 | 符合 5.1 |
+| 元信息 | `metadata` | object | 是 | 五字段快照，与文档一致 |
+| 字符数 | `charCount` | integer | 是 | Unicode 码位数 |
+| 跨父块引用 | `relatedContextParentIds` | array | 否 | 显式 ID 引用，替代文本重叠；ID 必须可解析，禁止自引用与成环 |
+
+约束：
+
+- 上下文父块**互不重叠**，且集合对原文做**完整无重叠划分**（拼接后等价于原文），由 **CCJ-010** 校验；子块不参与该覆盖校验。
+- 父块必须落在完整结构单元边界上（`startsAtUnitBoundary` / `endsAtUnitBoundary` 为 true），不得切在半句或条款中间。
+- 跨父块引用构成**有向无环图**，检出环路（含自引用）触发 **CCJ-011**（warning，不阻断）。
+
+### 7.3 父子配对与产物包 ParentChildPackage
+
+`ContextParentChildPair`：
+
+| 字段 | JSON 名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- | --- |
+| 上下文父块标识 | `contextParentChunkId` | string | 是 | 必须能在父块集合中解析 |
+| 子块标识数组 | `childChunkIds` | array | 是 | **非空**；1:N 为主，1:1 为合法边界，不告警 |
+
+`ParentChildPackage`（独立产物，与 `JudgeReport` 解耦）：
+
+| 字段 | JSON 名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- | --- |
+| 文档标识 | `documentId` | string | 是 | 回指 DocumentFeature |
+| 策略名 | `strategy` | string | 是 | 符合 5.1 |
+| 生成时间 | `generatedAt` | string(date-time) | 是 | ISO 8601 |
+| 上下文父块集合 | `parentChunks` | array | 是 | 见 7.2 |
+| 父子配对集合 | `pairs` | array | 是 | 见上 |
+
+配对基数：一个 contextParent 可绑定多个 childChunk（1:N），允许 1:1。父块侧 `childChunkIds[]` 为**权威来源**，子块侧 `contextParentChunkId` 为派生视图，两侧不一致由 **CCJ-008** 检出。
+
+`parentChild.enabled=false` 时，输出中不得携带 `parentChunks` / `contextParentChunkId`，检出触发 **CCJ-013**（**error，`passed=false`**）。
 
 ## 8. 判定规则
 
@@ -187,9 +254,10 @@ strategy = {type}@{targetSize}
 
 | 常量 | 值 | 说明 |
 | --- | --- | --- |
-| `MAX_CHUNK_CHARS` | 1500 | 单块字符数硬上限，任何选项不得放宽 |
+| `MAX_CHUNK_CHARS` | 1500 | 子块字符数**告警阈值**，任何选项不得放宽；CCJ-004 作用域仅 Child Chunk |
+| `PARENT_MAX_CHARS_DEBUG` | 6000 | 父块长度告警阈值的**临时调试默认值**，非标准基准；正式值由样本 P95 标定，契约不设全局硬封顶 |
 
-### 8.3 基础规则表（CCJ-001..CCJ-007）
+### 8.3 基础规则表（CCJ-001..CCJ-014）
 
 | 编号 | 级别 | 触发条件 | 输出要点 |
 | --- | --- | --- | --- |
@@ -199,13 +267,22 @@ strategy = {type}@{targetSize}
 | CCJ-004 | warning | `charCount > 1500` | 报告实际字符数 |
 | CCJ-005 | error | 偏移越界、`endOffset <= startOffset`、或 `text` 与原文该区间不一致 | 报告区间与差异类型 |
 | CCJ-006 | warning | 相邻切片区间重叠（前一块 `endOffset` > 后一块 `startOffset`） | 报告相邻切片对 |
-| CCJ-007 | error | 选项非法：`targetSize` 越界、`maxChunkSize > 1500`、`maxChunkSize < targetSize`、`minChunkSize` 越界、`overlap` 越界 | 逐项报告非法参数 |
+| CCJ-007 | error | 选项非法：`targetSize` 越界、`maxChunkSize > 1500`、`maxChunkSize < targetSize`、`minChunkSize` 越界、`overlap` 越界、`parentMaxChars` 非正整数 | 逐项报告非法参数 |
+| CCJ-008 | error | 配对结构不完整：`childChunkIds` 为空、ID 无法解析、父子两侧不一致、一个子块归属多个上下文父块 | 报告父块标识与问题类型 |
+| CCJ-009 | warning | 上下文父块 `charCount > parentMaxChars` | 报告实际字符数与阈值，与 CCJ-004 分开计数 |
+| CCJ-010 | error | 上下文父块区间重叠、非原文精确子串、或集合拼接后不等价于原文（未构成完整无重叠划分） | 报告区间与差异类型 |
+| CCJ-011 | warning | 跨父块引用存在环路（含自引用） | 报告环路路径 |
+| CCJ-012 | error | 子块区间未落在其归属 contextParent 区间内 | 报告子块与父块区间 |
+| CCJ-013 | error | `parentChild.enabled=false` 时输出存在 `parentChunks` 或 `contextParentChunkId` | 报告检出字段，判定不通过 |
+| CCJ-014 | warning | `parentChunkId`（deprecated）与 `structuralParentChunkId` 同时出现但值不一致 | 报告两个值 |
 
 ### 8.4 基础规则的不可变性
 
-- CCJ-001..CCJ-007 全部为**基础规则**：不可删除、不可改编号、不可降级级别、不可改变判定条件。
+- CCJ-001..CCJ-014 全部为**基础规则**：不可删除、不可改编号、不可降级级别、不可改变判定条件。
 - 实现可以提供「扩展规则」新增校验，但**不得删除基础校验**，也不得用扩展规则豁免基础规则判出的问题。
 - 基础规则可以按需关闭输出级别（如将 warning 降为 info）仅限实现内部展示层，不得改变 `JudgeReport` 中的契约语义。
+- **长度校验作用域**：CCJ-004 作用域为 **Child Chunk**（阈值 1500，不可豁免）；上下文父块由 **CCJ-009** 独立约束（阈值 `parentMaxChars`，仅告警）。这是**规则作用域拆分**，不是对 CCJ-004 的豁免。
+- 双库模式下的推论：父块互不重叠 + 全文划分 + 子块区间 ⊆ 父块区间，可推出子块区间互不重叠，CCJ-006 此时应恒不触发；触发即说明上游未遵守「先父后子」数据流。
 
 ## 9. 判定报告 JudgeReport
 
@@ -232,6 +309,11 @@ strategy = {type}@{targetSize}
 | `averageCharCount` | integer | 平均字符数，四舍五入取整 |
 | `emptyChunkCount` | integer | 空切片数量 |
 | `oversizedChunkCount` | integer | 超过 1500 字符的切片数量 |
+| `parentChunkCount` | integer | 上下文父块总数，无双库产物时为 0 |
+| `childWithParentCount` | integer | 绑定到上下文父块的子块数量 |
+| `parentCoverageRatio` | number | `childWithParentCount` / 子块总数；无子块时为 0 |
+| `parentCharP95` | integer | 上下文父块字符长度 P95（四舍五入取整），无父块时为 0 |
+| `oversizedParentChunkCount` | integer | 超过 `parentMaxChars` 的父块数量，与 `oversizedChunkCount` 独立累加 |
 
 ### 9.2 issue
 

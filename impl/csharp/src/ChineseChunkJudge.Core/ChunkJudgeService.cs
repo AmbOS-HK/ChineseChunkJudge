@@ -106,12 +106,65 @@ public sealed class ChunkJudgeService
         return BuildReport(document, linked, options);
     }
 
+    /// <summary>对已归一化的契约切片与双库产物判定（会重建关系指针，保留上下文父指针）。</summary>
+    public JudgeReport JudgeContractChunks(
+        DocumentFeature document,
+        IReadOnlyList<ContractChunk> chunks,
+        ChunkStrategyOptions options,
+        IReadOnlyList<ContextParentChunk> parentChunks,
+        IReadOnlyList<ContextParentChildPair> pairs)
+    {
+        var linked = _relationBuilder.Build(chunks);
+        return BuildReport(document, linked, options, parentChunks, pairs);
+    }
+
+    /// <summary>对调用方提交的原始切片与双库产物判定。</summary>
+    public JudgeReport Judge(
+        DocumentFeature document,
+        IReadOnlyList<RawChunk> rawChunks,
+        ChunkStrategyOptions options,
+        IReadOnlyList<ContextParentChunk> parentChunks,
+        IReadOnlyList<ContextParentChildPair> pairs)
+    {
+        ArgumentNullException.ThrowIfNull(parentChunks);
+        ArgumentNullException.ThrowIfNull(pairs);
+
+        var chunks = Normalize(document, rawChunks, options);
+        return BuildReport(document, chunks, options, parentChunks, pairs);
+    }
+
+    /// <summary>生成双库独立产物包，与判定报告解耦。</summary>
+    public ParentChildPackage BuildPackage(
+        DocumentFeature document,
+        ChunkStrategyOptions options,
+        IReadOnlyList<ContextParentChunk> parentChunks,
+        IReadOnlyList<ContextParentChildPair> pairs)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(parentChunks);
+        ArgumentNullException.ThrowIfNull(pairs);
+
+        return new ParentChildPackage
+        {
+            DocumentId = document.DocumentId,
+            Strategy = options.StrategyName,
+            GeneratedAt = DateTimeOffset.Now,
+            ParentChunks = parentChunks,
+            Pairs = pairs
+        };
+    }
+
     private JudgeReport BuildReport(
         DocumentFeature document,
         IReadOnlyList<ContractChunk> chunks,
-        ChunkStrategyOptions options)
+        ChunkStrategyOptions options,
+        IReadOnlyList<ContextParentChunk>? parentChunks = null,
+        IReadOnlyList<ContextParentChildPair>? pairs = null)
     {
-        var validation = _validator.Validate(document, chunks, options);
+        var parents = parentChunks ?? [];
+        var parentPairs = pairs ?? [];
+        var validation = _validator.Validate(document, chunks, options, parents, parentPairs);
         var appliedRules = RuleEngine.Rules
             .Select(r => new AppliedRule
             {
@@ -132,40 +185,52 @@ public sealed class ChunkJudgeService
             TargetSize = options.TargetSize,
             GeneratedAt = DateTimeOffset.Now,
             Passed = validation.Passed,
-            Summary = Summarize(chunks),
+            Summary = Summarize(chunks, parents, options),
             Issues = validation.Issues,
             AppliedRules = appliedRules
         };
     }
 
-    private static ChunkReportSummary Summarize(IReadOnlyList<ContractChunk> chunks)
+    private static ChunkReportSummary Summarize(
+        IReadOnlyList<ContractChunk> chunks,
+        IReadOnlyList<ContextParentChunk> parentChunks,
+        ChunkStrategyOptions options)
     {
-        if (chunks.Count == 0)
-        {
-            return new ChunkReportSummary
-            {
-                ChunkCount = 0,
-                TotalCharCount = 0,
-                MinCharCount = 0,
-                MaxCharCount = 0,
-                AverageCharCount = 0,
-                EmptyChunkCount = 0,
-                OversizedChunkCount = 0
-            };
-        }
-
         var sizes = chunks.Select(c => ChunkTextMetrics.CountCharacters(c.Text)).ToList();
         int total = sizes.Sum();
+        int childWithParent = chunks.Count(c => c.Relations.ContextParentChunkId is not null);
+
+        var parentSizes = parentChunks.Select(p => ChunkTextMetrics.CountCharacters(p.Text)).OrderBy(s => s).ToList();
+        int threshold = options.ParentChild?.ParentMaxChars ?? ContractConstants.ParentMaxCharsDebugDefault;
 
         return new ChunkReportSummary
         {
             ChunkCount = chunks.Count,
             TotalCharCount = total,
-            MinCharCount = sizes.Min(),
-            MaxCharCount = sizes.Max(),
-            AverageCharCount = (int)Math.Round(total / (double)chunks.Count, MidpointRounding.AwayFromZero),
+            MinCharCount = sizes.Count == 0 ? 0 : sizes.Min(),
+            MaxCharCount = sizes.Count == 0 ? 0 : sizes.Max(),
+            AverageCharCount = chunks.Count == 0
+                ? 0
+                : (int)Math.Round(total / (double)chunks.Count, MidpointRounding.AwayFromZero),
             EmptyChunkCount = chunks.Count(c => ChunkTextMetrics.IsBlank(c.Text)),
-            OversizedChunkCount = sizes.Count(s => s > ContractConstants.MaxChunkChars)
+            OversizedChunkCount = sizes.Count(s => s > ContractConstants.MaxChunkChars),
+            ParentChunkCount = parentChunks.Count,
+            ChildWithParentCount = childWithParent,
+            ParentCoverageRatio = chunks.Count == 0 ? 0d : (double)childWithParent / chunks.Count,
+            ParentCharP95 = Percentile95(parentSizes),
+            OversizedParentChunkCount = parentSizes.Count(s => s > threshold)
         };
+    }
+
+    /// <summary>P95 最近秩法；无父块时为 0。</summary>
+    private static int Percentile95(IReadOnlyList<int> sortedSizes)
+    {
+        if (sortedSizes.Count == 0)
+        {
+            return 0;
+        }
+
+        int rank = (int)Math.Ceiling(0.95 * sortedSizes.Count);
+        return sortedSizes[Math.Clamp(rank - 1, 0, sortedSizes.Count - 1)];
     }
 }

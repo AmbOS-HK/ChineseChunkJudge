@@ -69,7 +69,12 @@
         "maxCharCount",
         "averageCharCount",
         "emptyChunkCount",
-        "oversizedChunkCount"
+        "oversizedChunkCount",
+        "parentChunkCount",
+        "childWithParentCount",
+        "parentCoverageRatio",
+        "parentCharP95",
+        "oversizedParentChunkCount"
       ],
       "properties": {
         "chunkCount": { "type": "integer", "minimum": 0 },
@@ -78,7 +83,20 @@
         "maxCharCount": { "type": "integer", "minimum": 0 },
         "averageCharCount": { "type": "integer", "minimum": 0 },
         "emptyChunkCount": { "type": "integer", "minimum": 0 },
-        "oversizedChunkCount": { "type": "integer", "minimum": 0 }
+        "oversizedChunkCount": { "type": "integer", "minimum": 0 },
+        "parentChunkCount": { "type": "integer", "minimum": 0 },
+        "childWithParentCount": { "type": "integer", "minimum": 0 },
+        "parentCoverageRatio": {
+          "type": "number",
+          "minimum": 0,
+          "description": "childWithParentCount / 子块总数；无子块时为 0。"
+        },
+        "parentCharP95": { "type": "integer", "minimum": 0 },
+        "oversizedParentChunkCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "超过 parentMaxChars 的父块数量，与 oversizedChunkCount 独立累加。"
+        }
       }
     },
     "issue": {
