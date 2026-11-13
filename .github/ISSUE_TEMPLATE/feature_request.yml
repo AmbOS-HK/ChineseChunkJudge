@@ -1,0 +1,43 @@
+name: 变更提案
+description: 提出契约变更或新增基础规则（走 MAJOR/MINOR/PATCH 判定）
+title: "[proposal] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        本仓库契约先行：任何影响可观察行为的改动都要先定契约版本位，再改实现。
+        请先读 `contract/rules.md` §12 与 §12.1。
+  - type: textarea
+    id: motivation
+    attributes:
+      label: 要解决的现实问题
+      description: 哪类中文文档、哪种切片场景在现有规则下判定不了或判错
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 提案内容
+      description: 新增或修改的字段、规则编号、判定级别、判定条件
+    validations:
+      required: true
+  - type: dropdown
+    id: version_bit
+    attributes:
+      label: 你判断的版本位
+      description: 按 rules.md §12.1 判定，命中即停
+      options:
+        - MAJOR（删字段、字段转必填、放宽判定、改既有字段语义、改规则级别）
+        - MINOR（新增字段/规则/端点、收紧判定、新增枚举）
+        - PATCH（缺陷修复、文本澄清、文档修订）
+        - 不确定
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: 兼容性影响
+      description: 是否涉及弃用字段与清理版本；是否让既有通过样本转为不通过
+    validations:
+      required: true

@@ -1,0 +1,24 @@
+# 默认：文本文件以 LF 入库，检出时不做额外转换
+* text=auto eol=lf
+
+# 语言与数据文件显式声明为文本
+*.cs      text diff=csharp
+*.csproj  text
+*.sln     text eol=crlf
+*.md      text
+*.json    text
+*.jsonl   text
+*.yaml    text
+*.yml     text
+*.ps1     text eol=crlf
+*.gitignore text
+*.gitattributes text
+
+# 二进制：不做文本转换与 diff
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.dll binary
+*.pdb binary

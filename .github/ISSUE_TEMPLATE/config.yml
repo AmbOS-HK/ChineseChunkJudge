@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全问题
+    url: https://github.com/AmbOS-HK/ChineseChunkJudge/blob/main/SECURITY.md
+    about: 请按安全政策私下报告，不要开公开 Issue
+  - name: 贡献指南
+    url: https://github.com/AmbOS-HK/ChineseChunkJudge/blob/main/CONTRIBUTING.md
+    about: 契约先行流程、版本号规则、构建与测试命令

@@ -1,0 +1,60 @@
+name: 缺陷报告
+description: 报告契约（rules / schema / openapi）或 C# 参考实现中的缺陷
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请确认：这不是 ChunkJudgeBench 的评测结论问题（那属于另一个仓库），也不是外部插件的实现问题。
+        安全问题请勿在此提交，见 SECURITY.md。
+  - type: input
+    id: contract_version
+    attributes:
+      label: 契约版本
+      description: contract/rules.md 表头、openapi.yaml 的 info.version、ContractConstants.ContractVersion 应同值
+      placeholder: "0.9.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 缺陷所在
+      options:
+        - contract/rules.md（规则语义或编号）
+        - contract/schema/*.json
+        - contract/openapi.yaml
+        - impl/csharp 规则引擎或校验器
+        - impl/csharp 模型或构建器
+        - 文档与实现不一致
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 引用具体的规则编号（CCJ-xxx）或契约章节（§x.y）
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 最小复现
+      description: 输入切片 JSON、命令行或测试代码；能贴出 JudgeReport 片段更好
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 环境
+      description: .NET SDK 版本与操作系统
+      placeholder: ".NET SDK 10.0.403 / Windows 11"
+    validations:
+      required: false
