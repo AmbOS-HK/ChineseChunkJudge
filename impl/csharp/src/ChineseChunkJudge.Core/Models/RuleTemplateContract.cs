@@ -89,6 +89,14 @@ public sealed record TemplateValidation
     public string? AcceptanceRef { get; init; }
 }
 
+/// <summary>选型结果来源（0.8.0）。</summary>
+public static class TemplateSelectionReasons
+{
+    public const string RuleMatched = "rule_matched";
+
+    public const string Fallback = "fallback";
+}
+
 /// <summary>模板决策结果：命中规则或强制兜底。</summary>
 public sealed record TemplateDecision
 {
@@ -98,6 +106,12 @@ public sealed record TemplateDecision
     public int? MatchedRuleIndex { get; init; }
 
     public required bool UsedFallback { get; init; }
+
+    /// <summary>类别过滤后的候选模板数；单模板形态固定为 1。</summary>
+    public required int CandidateCount { get; init; }
+
+    /// <summary>rule_matched / fallback。</summary>
+    public required string SelectionReason { get; init; }
 
     public required string ChunkMode { get; init; }
 

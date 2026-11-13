@@ -319,6 +319,22 @@ public sealed class ParentChildRulesTests
         Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ParentChildPairStructure && i.Message.Contains("跨父块引用") && i.Message.Contains("无法在父块集合中解析"));
     }
 
+    [Fact]
+    public void PairChildMissingContextParent_Fails_CCJ008()
+    {
+        var document = CreateDocument(SampleContent);
+        var (chunks, parents, pairs) = CreateValidDualLibrary();
+        chunks[0] = chunks[0] with { Relations = new ChunkRelations() };
+
+        var result = new ChunkValidator().Validate(document, chunks, EnabledOptions(), parents, pairs);
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i =>
+            i.RuleId == ChunkRuleIds.ParentChildPairStructure &&
+            i.Message.Contains("与父侧配对") &&
+            i.Message.Contains("不一致"));
+    }
+
     private static (List<ContractChunk> Chunks, List<ContextParentChunk> Parents, List<ContextParentChildPair> Pairs) CreateValidDualLibrary()
     {
         var chunks = new List<ContractChunk>

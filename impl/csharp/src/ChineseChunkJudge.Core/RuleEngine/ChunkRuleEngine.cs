@@ -23,6 +23,7 @@ public static class ChunkRuleIds
     public const string ParentAliasConsistency = "CCJ-014";
     public const string HardCut = "CCJ-015";
     public const string ChunkIdentity = "CCJ-016";
+    public const string ChunkIdentityConsistency = "CCJ-017";
 }
 
 /// <summary>规则求值上下文。</summary>
@@ -380,6 +381,122 @@ public sealed class ChunkIdentityRule : IChunkRule
     }
 }
 
+/// <summary>CCJ-017：切片标识、序号与字符计数的一致性。</summary>
+public sealed class ChunkIdentityConsistencyRule : IChunkRule
+{
+    public string RuleId => ChunkRuleIds.ChunkIdentityConsistency;
+
+    public string Description => "chunkId 必须等于 {strategy}#{index}；index 必须从 0 起连续且不重复；charCount 必须等于 text 的 Unicode 码位数。";
+
+    public ChunkIssueSeverity Severity => ChunkIssueSeverity.Error;
+
+    public bool IsBaseRule => true;
+
+    public IEnumerable<ChunkIssue> Evaluate(ChunkValidationContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (context.Chunks.Count == 0)
+        {
+            yield break;
+        }
+
+        var indexCounts = new Dictionary<int, int>();
+        foreach (var chunk in context.Chunks)
+        {
+            indexCounts.TryGetValue(chunk.Index, out int count);
+            indexCounts[chunk.Index] = count + 1;
+        }
+
+        foreach (var (index, count) in indexCounts.Where(pair => pair.Value > 1))
+        {
+            yield return new ChunkIssue
+            {
+                RuleId = RuleId,
+                Severity = Severity,
+                Message = $"切片序号 index={index} 重复出现 {count} 次，index 必须从 0 起连续且不重复。",
+                Detail = new Dictionary<string, string>
+                {
+                    ["field"] = "index",
+                    ["value"] = index.ToString(CultureInfo.InvariantCulture),
+                    ["occurrences"] = count.ToString(CultureInfo.InvariantCulture)
+                }
+            };
+        }
+
+        var distinctIndexes = indexCounts.Keys.OrderBy(value => value).ToList();
+        int expectedCount = context.Chunks.Count;
+        bool continuous = distinctIndexes.Count == expectedCount
+            && distinctIndexes[0] == 0
+            && distinctIndexes[^1] == expectedCount - 1
+            && distinctIndexes[^1] - distinctIndexes[0] + 1 == expectedCount;
+
+        if (!continuous)
+        {
+            yield return new ChunkIssue
+            {
+                RuleId = RuleId,
+                Severity = Severity,
+                Message = $"切片序号不连续：共 {expectedCount} 个切片，实际序号 {distinctIndexes[0]}..{distinctIndexes[^1]}（去重后 {distinctIndexes.Count} 个），期望 0..{expectedCount - 1}。",
+                Detail = new Dictionary<string, string>
+                {
+                    ["field"] = "index",
+                    ["expected"] = $"0..{expectedCount - 1}",
+                    ["actualCount"] = expectedCount.ToString(CultureInfo.InvariantCulture),
+                    ["distinctCount"] = distinctIndexes.Count.ToString(CultureInfo.InvariantCulture),
+                    ["min"] = distinctIndexes[0].ToString(CultureInfo.InvariantCulture),
+                    ["max"] = distinctIndexes[^1].ToString(CultureInfo.InvariantCulture)
+                }
+            };
+        }
+
+        foreach (var chunk in context.Chunks)
+        {
+            if (!string.IsNullOrWhiteSpace(chunk.ChunkId))
+            {
+                string expectedId = $"{chunk.Strategy}#{chunk.Index}";
+                if (!string.Equals(chunk.ChunkId, expectedId, StringComparison.Ordinal))
+                {
+                    yield return new ChunkIssue
+                    {
+                        RuleId = RuleId,
+                        Severity = Severity,
+                        ChunkId = chunk.ChunkId,
+                        Message = $"切片 {chunk.ChunkId} 的 chunkId 与 strategy/index 不一致，期望 {expectedId}。",
+                        Detail = new Dictionary<string, string>
+                        {
+                            ["field"] = "chunkId",
+                            ["expected"] = expectedId,
+                            ["value"] = chunk.ChunkId
+                        }
+                    };
+                }
+            }
+
+            if (chunk.Text is not null)
+            {
+                int actualCharCount = ChunkTextMetrics.CountCharacters(chunk.Text);
+                if (chunk.CharCount != actualCharCount)
+                {
+                    yield return new ChunkIssue
+                    {
+                        RuleId = RuleId,
+                        Severity = Severity,
+                        ChunkId = chunk.ChunkId,
+                        Message = $"切片 {chunk.ChunkId} 的 charCount={chunk.CharCount} 与正文码位数 {actualCharCount} 不一致。",
+                        Detail = new Dictionary<string, string>
+                        {
+                            ["field"] = "charCount",
+                            ["expected"] = actualCharCount.ToString(CultureInfo.InvariantCulture),
+                            ["value"] = chunk.CharCount.ToString(CultureInfo.InvariantCulture)
+                        }
+                    };
+                }
+            }
+        }
+    }
+}
+
 /// <summary>CCJ-007：策略选项非法。</summary>
 public sealed class InvalidOptionsRule : IChunkRule
 {
@@ -510,12 +627,13 @@ public sealed class ChunkRuleEngine
         ChunkRuleIds.ParentChildDisabled,
         ChunkRuleIds.ParentAliasConsistency,
         ChunkRuleIds.HardCut,
-        ChunkRuleIds.ChunkIdentity
+        ChunkRuleIds.ChunkIdentity,
+        ChunkRuleIds.ChunkIdentityConsistency
     };
 
     public IReadOnlyList<IChunkRule> Rules => _rules;
 
-    /// <summary>构造契约规定的十六条基础规则。</summary>
+    /// <summary>构造契约规定的十七条基础规则。</summary>
     public static IReadOnlyList<IChunkRule> CreateDefaultRules() =>
     [
         new MetadataCompletenessRule(),
@@ -533,7 +651,8 @@ public sealed class ChunkRuleEngine
         new ParentChildDisabledRule(),
         new ParentAliasConsistencyRule(),
         new HardCutRule(),
-        new ChunkIdentityRule()
+        new ChunkIdentityRule(),
+        new ChunkIdentityConsistencyRule()
     ];
 
     /// <summary>注册扩展规则。编号必须唯一，扩展规则不得声明为基础规则。</summary>

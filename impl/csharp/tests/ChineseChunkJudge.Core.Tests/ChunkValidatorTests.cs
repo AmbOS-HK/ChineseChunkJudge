@@ -143,6 +143,86 @@ public sealed class ChunkValidatorTests
     }
 
     [Fact]
+    public void IndexGap_Fails_CCJ017()
+    {
+        var document = CreateDocument(SampleContent);
+        var chunks = new[]
+        {
+            CreateChunk(0, "第一段内容。", 0),
+            CreateChunk(2, "第二段内容。", 6)
+        };
+
+        var result = new ChunkValidator().Validate(document, chunks);
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ChunkIdentityConsistency && i.Detail!["field"] == "index");
+    }
+
+    [Fact]
+    public void ChunkIdMismatch_Fails_CCJ017()
+    {
+        var document = CreateDocument(SampleContent);
+        var chunk = CreateChunk(0, "第一段内容。", 0) with { ChunkId = "structure@600#1" };
+
+        var result = new ChunkValidator().Validate(document, new[] { chunk });
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ChunkIdentityConsistency && i.Detail!["field"] == "chunkId");
+    }
+
+    [Fact]
+    public void CharCountMismatch_Fails_CCJ017()
+    {
+        var document = CreateDocument(SampleContent);
+        var chunk = CreateChunk(0, "第一段内容。", 0) with { CharCount = 999 };
+
+        var result = new ChunkValidator().Validate(document, new[] { chunk });
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ChunkIdentityConsistency && i.Detail!["field"] == "charCount");
+    }
+
+    [Fact]
+    public void DuplicateIndex_Fails_CCJ017()
+    {
+        var document = CreateDocument(SampleContent);
+        var chunks = new[]
+        {
+            CreateChunk(0, "第一段内容。", 0),
+            CreateChunk(1, "第二段内容。", 6) with { Index = 0, ChunkId = "structure@600#1" }
+        };
+
+        var result = new ChunkValidator().Validate(document, chunks);
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ChunkIdentityConsistency && i.Detail!["field"] == "index");
+    }
+
+    [Fact]
+    public void Normalize_NullRawText_ThrowsArgumentException()
+    {
+        var document = CreateDocument(SampleContent);
+        var rawChunks = new[]
+        {
+            new RawChunk { Index = 0, Text = null!, StartOffset = 0, EndOffset = 0 }
+        };
+        var options = new ChunkStrategyOptions { StrategyType = "structure", TargetSize = 600 };
+
+        Assert.Throws<ArgumentException>(() =>
+            new ChunkJudgeService().Normalize(document, rawChunks, options));
+    }
+
+    [Fact]
+    public void Validate_NullDocumentContent_ThrowsArgumentException()
+    {
+        var document = CreateDocument(SampleContent) with { Content = null! };
+        var chunk = CreateChunk(0, "第一段内容。", 0);
+
+        Assert.Throws<ArgumentException>(() =>
+            new ChunkValidator().Validate(document, new[] { chunk }));
+    }
+
+    [Fact]
     public void InvalidOptions_ReportsError_CCJ007()
     {
         var document = CreateDocument(SampleContent);
@@ -222,7 +302,7 @@ public sealed class ChunkValidatorTests
         Assert.Equal("structure@600", report.Strategy);
         Assert.Equal(2, report.Summary.ChunkCount);
         Assert.Equal(12, report.Summary.TotalCharCount);
-        Assert.Equal(16, report.AppliedRules.Count);
+        Assert.Equal(17, report.AppliedRules.Count);
     }
 
     [Fact]

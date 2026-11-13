@@ -56,6 +56,8 @@ public sealed class ChunkValidator
         ArgumentNullException.ThrowIfNull(parentChunks);
         ArgumentNullException.ThrowIfNull(pairs);
 
+        ValidateInput(document, chunks, parentChunks);
+
         var issues = RuleEngine.Evaluate(new ChunkValidationContext
         {
             Document = document,
@@ -66,5 +68,49 @@ public sealed class ChunkValidator
         });
 
         return new ChunkValidationResult { Issues = issues };
+    }
+
+    /// <summary>入口空值保护：JSON Schema 能拦正常入口，库 API 直调时在此统一映射为参数错误。</summary>
+    private static void ValidateInput(
+        DocumentFeature document,
+        IReadOnlyList<ContractChunk> chunks,
+        IReadOnlyList<ContextParentChunk> parentChunks)
+    {
+        if (document.Content is null)
+        {
+            throw new ArgumentException("invalid_input：document.content 不得为空。", nameof(document));
+        }
+
+        if (document.Metadata is null)
+        {
+            throw new ArgumentException("invalid_input：document.metadata 不得为空。", nameof(document));
+        }
+
+        for (int i = 0; i < chunks.Count; i++)
+        {
+            var chunk = chunks[i];
+            if (chunk.Text is null)
+            {
+                throw new ArgumentException($"invalid_input：chunks[{i}].text 不得为空。", nameof(chunks));
+            }
+
+            if (chunk.Metadata is null)
+            {
+                throw new ArgumentException($"invalid_input：chunks[{i}].metadata 不得为空。", nameof(chunks));
+            }
+
+            if (chunk.Relations is null)
+            {
+                throw new ArgumentException($"invalid_input：chunks[{i}].relations 不得为空。", nameof(chunks));
+            }
+        }
+
+        for (int i = 0; i < parentChunks.Count; i++)
+        {
+            if (parentChunks[i].Text is null)
+            {
+                throw new ArgumentException($"invalid_input：parentChunks[{i}].text 不得为空。", nameof(parentChunks));
+            }
+        }
     }
 }

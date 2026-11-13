@@ -42,6 +42,11 @@
     "endsAtUnitBoundary": {
       "type": "boolean",
       "default": true
+    },
+    "headingPath": {
+      "type": "array",
+      "description": "祖先标题链，自最外层到最内层；不含块自身标题。由执行器/解析侧产出，本仓只透传保序，不推断、不补全。",
+      "items": { "type": "string" }
     }
   }
 }

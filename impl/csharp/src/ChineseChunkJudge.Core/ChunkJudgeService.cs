@@ -40,6 +40,19 @@ public sealed class ChunkJudgeService
         ArgumentNullException.ThrowIfNull(rawChunks);
         ArgumentNullException.ThrowIfNull(options);
 
+        if (document.Metadata is null)
+        {
+            throw new ArgumentException("invalid_input：document.metadata 不得为空。", nameof(document));
+        }
+
+        for (int i = 0; i < rawChunks.Count; i++)
+        {
+            if (rawChunks[i].Text is null)
+            {
+                throw new ArgumentException($"invalid_input：rawChunks[{i}].text 不得为空。", nameof(rawChunks));
+            }
+        }
+
         string strategy = options.StrategyName;
         var ordered = rawChunks.OrderBy(c => c.Index).ToList();
         var chunks = new List<ContractChunk>(ordered.Count);
@@ -60,7 +73,8 @@ public sealed class ChunkJudgeService
                 UnitKey = raw.UnitKey,
                 StructureLevel = raw.StructureLevel,
                 StartsAtUnitBoundary = raw.StartsAtUnitBoundary,
-                EndsAtUnitBoundary = raw.EndsAtUnitBoundary
+                EndsAtUnitBoundary = raw.EndsAtUnitBoundary,
+                HeadingPath = raw.HeadingPath
             });
         }
 

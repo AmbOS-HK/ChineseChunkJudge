@@ -85,6 +85,120 @@ public sealed class RuleTemplateAndHardCutTests
     }
 
     [Fact]
+    public void Resolve_SingleTemplate_ReportsSingleCandidate()
+    {
+        var decision = new TemplateResolver().Resolve(CreateTemplate(), ["law"], [ChunkTraits.ArticleNumbering]);
+
+        Assert.Equal(1, decision.CandidateCount);
+        Assert.Equal(TemplateSelectionReasons.RuleMatched, decision.SelectionReason);
+    }
+
+    [Fact]
+    public void ResolveMany_PrefersRuleMatchedCandidate_OverEarlierFallbackCandidate()
+    {
+        var generic = CreateTemplate() with
+        {
+            TemplateId = "generic-report",
+            AppliesTo = new TemplateAppliesTo { DocumentCategories = ["report"] },
+            Decision = new DecisionTable
+            {
+                Rules =
+                [
+                    new DecisionRule
+                    {
+                        Traits = [ChunkTraits.DenseTable],
+                        ChunkMode = ChunkModes.Smart,
+                        ChunkSize = 800
+                    }
+                ],
+                Fallback = new FallbackRule { ChunkMode = ChunkModes.Smart, ChunkSize = 600 }
+            }
+        };
+        var law = CreateTemplate() with { TemplateId = "law-template" };
+
+        var decision = new TemplateResolver().Resolve(
+            [generic, law],
+            ["report", "law"],
+            [ChunkTraits.ArticleNumbering]);
+
+        Assert.Equal("law-template", decision.TemplateId);
+        Assert.Equal(2, decision.CandidateCount);
+        Assert.Equal(TemplateSelectionReasons.RuleMatched, decision.SelectionReason);
+        Assert.Equal(ChunkModes.Regex, decision.ChunkMode);
+    }
+
+    [Fact]
+    public void ResolveMany_AllFallback_UsesFirstCandidateFallback()
+    {
+        var first = CreateTemplate() with
+        {
+            TemplateId = "first",
+            Decision = new DecisionTable
+            {
+                Rules =
+                [
+                    new DecisionRule
+                    {
+                        Traits = [ChunkTraits.ArticleNumbering],
+                        ChunkMode = ChunkModes.Regex,
+                        Pattern = "(?=第[一二三四五六七八九十百零〇0-9]+[条章])",
+                        ChunkSize = 1200
+                    }
+                ],
+                Fallback = new FallbackRule { ChunkMode = ChunkModes.Smart, ChunkSize = 900 }
+            }
+        };
+        var second = CreateTemplate() with
+        {
+            TemplateId = "second",
+            Decision = new DecisionTable
+            {
+                Rules =
+                [
+                    new DecisionRule
+                    {
+                        Traits = [ChunkTraits.DenseTable],
+                        ChunkMode = ChunkModes.Smart,
+                        ChunkSize = 1500
+                    }
+                ],
+                Fallback = new FallbackRule { ChunkMode = ChunkModes.Smart, ChunkSize = 1200 }
+            }
+        };
+
+        var decision = new TemplateResolver().Resolve(
+            [first, second],
+            ["law"],
+            [ChunkTraits.WeakStructure]);
+
+        Assert.Equal("first", decision.TemplateId);
+        Assert.True(decision.UsedFallback);
+        Assert.Equal(TemplateSelectionReasons.Fallback, decision.SelectionReason);
+        Assert.Equal(900, decision.ChunkSize);
+        Assert.Equal(2, decision.CandidateCount);
+    }
+
+    [Fact]
+    public void ResolveMany_NoCategoryIntersection_Throws()
+    {
+        var template = CreateTemplate();
+
+        var exception = Assert.Throws<ArgumentException>(() =>
+            new TemplateResolver().Resolve([template], ["plans"], [ChunkTraits.ArticleNumbering]));
+
+        Assert.Contains("no_applicable_template", exception.Message);
+    }
+
+    [Fact]
+    public void ResolveMany_EmptyTemplateList_Throws()
+    {
+        var exception = Assert.Throws<ArgumentException>(() =>
+            new TemplateResolver().Resolve([], ["law"], []));
+
+        Assert.Contains("no_applicable_template", exception.Message);
+    }
+
+    [Fact]
     public void HardCut_ExactSizeWithBadEnding_Fails_CCJ015()
     {
         // 1200 字符、结尾为“不得大于”，属恰长硬切。
@@ -187,6 +301,105 @@ public sealed class RuleTemplateAndHardCutTests
 
         Assert.False(result.Passed);
         Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.InvalidOptions && i.Detail!["option"] == "chunkMode");
+    }
+
+    [Fact]
+    public void Resolve_InvalidRegexPattern_Throws()
+    {
+        var template = CreateTemplate();
+        var invalid = template with
+        {
+            Decision = template.Decision with
+            {
+                Rules = [template.Decision.Rules[0] with { Pattern = "(" }, template.Decision.Rules[1]]
+            }
+        };
+
+        Assert.Throws<ArgumentException>(() =>
+            new TemplateResolver().Resolve(invalid, ["law"], [ChunkTraits.ArticleNumbering]));
+    }
+
+    [Fact]
+    public void Resolve_ChunkSizeOutOfRange_Throws()
+    {
+        var template = CreateTemplate();
+        var invalid = template with
+        {
+            Decision = template.Decision with
+            {
+                Rules = [template.Decision.Rules[0] with { ChunkSize = 2000 }, template.Decision.Rules[1]]
+            }
+        };
+
+        Assert.Throws<ArgumentException>(() =>
+            new TemplateResolver().Resolve(invalid, ["law"], [ChunkTraits.ArticleNumbering]));
+    }
+
+    [Fact]
+    public void Resolve_FallbackChunkSizeOutOfRange_Throws()
+    {
+        var template = CreateTemplate();
+        var invalid = template with
+        {
+            Decision = template.Decision with
+            {
+                Fallback = template.Decision.Fallback with { ChunkSize = 0 }
+            }
+        };
+
+        Assert.Throws<ArgumentException>(() =>
+            new TemplateResolver().Resolve(invalid, ["law"], [ChunkTraits.DenseTable]));
+    }
+
+    [Fact]
+    public void Resolve_UnknownChunkMode_Throws()
+    {
+        var template = CreateTemplate();
+        var invalid = template with
+        {
+            Decision = template.Decision with
+            {
+                Rules = [template.Decision.Rules[0], template.Decision.Rules[1] with { ChunkMode = "recursive" }]
+            }
+        };
+
+        Assert.Throws<ArgumentException>(() =>
+            new TemplateResolver().Resolve(invalid, ["law"], [ChunkTraits.WeakStructure]));
+    }
+
+    [Fact]
+    public void Resolve_UnmatchedInvalidRule_StillThrows()
+    {
+        var template = CreateTemplate();
+        var invalid = template with
+        {
+            Decision = template.Decision with
+            {
+                Rules =
+                [
+                    template.Decision.Rules[0],
+                    new DecisionRule
+                    {
+                        Traits = [ChunkTraits.DenseTable],
+                        ChunkMode = ChunkModes.Regex,
+                        Pattern = "(",
+                        ChunkSize = 1200
+                    }
+                ]
+            }
+        };
+
+        Assert.Throws<ArgumentException>(() =>
+            new TemplateResolver().Resolve(invalid, ["law"], [ChunkTraits.ArticleNumbering]));
+    }
+
+    [Fact]
+    public void ResolveMany_NullTemplate_Throws()
+    {
+        IReadOnlyList<ChunkRuleTemplate> templates = [null!];
+
+        Assert.Throws<ArgumentNullException>(() =>
+            new TemplateResolver().Resolve(templates, ["law"], [ChunkTraits.ArticleNumbering]));
     }
 
     private static (DocumentFeature Document, ContractChunk[] Chunks, ChunkStrategyOptions Options) CreateCase(string text)

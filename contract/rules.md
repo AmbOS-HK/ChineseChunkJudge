@@ -2,7 +2,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| 契约版本 | 0.7.1 |
+| 契约版本 | 0.9.0 |
 | 状态 | 生效 |
 | 权威文件 | 本文件 + `contract/openapi.yaml` + `contract/schema/*.json` |
 | 适用范围 | 任意语言、任意实现产出的文本切片结果 |
@@ -165,6 +165,14 @@ strategy = {type}@{targetSize}
 | 结构层级 | `structureLevel` | integer | 否 | 块起始处标题层级 |
 | 起始齐边界 | `startsAtUnitBoundary` | boolean | 否 | 默认 true |
 | 结束齐边界 | `endsAtUnitBoundary` | boolean | 否 | 默认 true |
+| 标题路径 | `headingPath` | array&lt;string&gt; | 否 | 自最外层到最内层的祖先标题链，由执行器/解析侧产出，本仓只透传保序，不推断、不补全（见 6.1） |
+
+### 6.1 headingPath
+
+- 语义：块所在位置的结构路径，**最外层在前、最内层在后**；不含块自身标题，只含祖先标题。
+- 产出方：执行器或文档解析侧。本仓（`Normalize` 与 Judge）只原样透传，缺失即不输出，不根据正文或 `unitKind` 反推。
+- 校验：本期**不新增判定规则**；空串、重复项、末项与块标题是否一致均不校验（见 `docs/06` 未决点）。
+- 用途：供 `rag_generation` 拼接上下文与引用回溯，属通用能力，不绑定任何单一消费者。
 
 ## 7. 契约切片 ContractChunk
 
@@ -183,6 +191,7 @@ strategy = {type}@{targetSize}
 | 结构层级 | `structureLevel` | integer | 否 | 继承自 RawChunk |
 | 起始齐边界 | `startsAtUnitBoundary` | boolean | 否 | 默认 true |
 | 结束齐边界 | `endsAtUnitBoundary` | boolean | 否 | 默认 true |
+| 标题路径 | `headingPath` | array&lt;string&gt; | 否 | 继承自 RawChunk，原样透传保序，见 6.1 |
 | 关系 | `relations` | object | 是 | 见 7.1 |
 
 ### 7.1 relations
@@ -261,7 +270,7 @@ strategy = {type}@{targetSize}
 | `MAX_CHUNK_CHARS` | 1500 | 子块字符数**告警阈值**，任何选项不得放宽；CCJ-004 作用域仅 Child Chunk |
 | `PARENT_MAX_CHARS_DEBUG` | 6000 | 父块长度告警阈值的**临时调试默认值**，非标准基准；正式值由样本 P95 标定，契约不设全局硬封顶 |
 
-### 8.3 基础规则表（CCJ-001..CCJ-016）
+### 8.3 基础规则表（CCJ-001..CCJ-017）
 
 | 编号 | 级别 | 触发条件 | 输出要点 |
 | --- | --- | --- | --- |
@@ -281,10 +290,11 @@ strategy = {type}@{targetSize}
 | CCJ-014 | warning | `parentChunkId`（deprecated）与 `structuralParentChunkId` 同时出现但值不一致 | 报告两个值 |
 | CCJ-015 | error | 恰长硬切：`charCount` 恰好等于 `chunkSize` 且结尾不在允许句读集合（页码容错）；`page` 模式豁免，父块不适用 | 报告子块标识、长度与结尾片段 |
 | CCJ-016 | error | 切片标识非法：`chunkId` 为空、纯空白或重复；单库与双库一律执行 | 报告 `chunkId` 与出现次数 |
+| CCJ-017 | error | 切片标识、序号与计数不一致：`chunkId` 不等于 `{strategy}#{index}`；`index` 不是从 0 起连续（含重复）；`charCount` 不等于 `text` 的 Unicode 码位数。只作用于 Child Chunk | 报告字段、期望值与实际值 |
 
 ### 8.4 基础规则的不可变性
 
-- CCJ-001..CCJ-016 全部为**基础规则**：不可删除、不可改编号、不可降级级别、不可改变判定条件。
+- CCJ-001..CCJ-017 全部为**基础规则**：不可删除、不可改编号、不可降级级别、不可改变判定条件。
 - 实现可以提供「扩展规则」新增校验，但**不得删除基础校验**，也不得用扩展规则豁免基础规则判出的问题。
 - 基础规则可以按需关闭输出级别（如将 warning 降为 info）仅限实现内部展示层，不得改变 `JudgeReport` 中的契约语义。
 - **长度校验作用域**：CCJ-004 作用域为 **Child Chunk**（阈值 1500，不可豁免）；上下文父块由 **CCJ-009** 独立约束（阈值 `parentMaxChars`，仅告警）。这是**规则作用域拆分**，不是对 CCJ-004 的豁免。
@@ -298,6 +308,14 @@ strategy = {type}@{targetSize}
 - **页码容错**：结尾匹配「句读 + 可选空白 + 1..4 位纯数字」视为页码，不计硬切。
 - **超限不判**：`charCount > chunkSize` 由 CCJ-004 处理；小于不判。
 - **级别**：error，`passed=false`；计数入 `summary.hardCutChunkCount`。
+
+### 8.6 CCJ-017 标识与序号一致性判定细则
+
+- **判定对象**：`ContractChunk`（子块）。父块不适用；父块标识仍由 CCJ-008 唯一性与格式建议约束。
+- **`chunkId`**：必须严格等于 `{strategy}#{index}`，逐字比较；为空或纯空白时不判格式（由 CCJ-016 处理），避免重复报错。
+- **`index`**：集合必须是 `0..N-1` 的完整序列，N 为子块总数；重复与缺号分别报告。
+- **`charCount`**：必须等于 `text` 的 Unicode 码位数；`text` 为空串时 `charCount` 必须为 0。
+- **级别**：error，`passed=false`。该规则为 0.9.0 新增，属收紧判定，不改变既有字段与规则语义。
 
 ## 9. 判定报告 JudgeReport
 
@@ -415,3 +433,23 @@ strategy = {type}@{targetSize}
 - 正则禁忌用枚举字段：`forbidLineStartAnchor: boolean = true`（禁 `^` 多行锚）、`forbidHeadingSplit: boolean = true`（禁 h3 标题切分）、`preserveSeparator: boolean = true`（保留分隔符）。
 - `chunkSize`：integer，1..1500；`smart` 为软上限。
 - `parentChild` 引用 §5.3 配置，不复制字段。
+
+### 13.3 模板集选型（0.8.0）
+
+`POST /templates/resolve` 请求二选一：
+
+| 形态 | 字段 | 语义 |
+| --- | --- | --- |
+| 单模板（旧） | `template` | 兼容保留，**deprecated**，1.0.0 移除；模板由调用方选定，`appliesTo` 不参与准入 |
+| 模板集（0.8.0） | `templates[]` | 由本仓选型：类别过滤 + 顺序择优 |
+
+约束：
+
+1. `template` 与 `templates` **恰好提供一个**；同时提供或都不提供返回 400。
+2. `templates` 必须非空。
+3. 类别过滤：保留 `appliesTo.documentCategories` 与请求 `documentCategories` 有交集的模板；`appliesTo.documentCategories` 为空数组**不视为通配**。
+4. 优先级：候选按请求数组顺序，顺序即优先级，不引入 `priority` 字段。
+5. 择优：存在「规则命中」的候选时，取顺序最前命中者（`selectionReason=rule_matched`）；全部未命中时，取顺序最前候选的 `fallback`（`selectionReason=fallback`）。不得采用「首个候选无论是否命中都兜底」。
+6. 类别过滤后为空：返回 400，错误码 `no_applicable_template`。
+7. 响应字段：`templateId` 为**实际选中**的模板；新增 `candidateCount`（类别过滤后候选数）与 `selectionReason`（`rule_matched` / `fallback`）。
+8. 单模板形态行为与 0.7.1 一致，`candidateCount` 固定为 1。

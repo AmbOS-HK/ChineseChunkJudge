@@ -15,7 +15,7 @@ public static class ContractConstants
     public const string StrategyNamePattern = @"^[a-z][a-z0-9_-]*@[1-9][0-9]*$";
 
     /// <summary>契约版本号，与 contract/rules.md 表头一致。</summary>
-    public const string ContractVersion = "0.7.1";
+    public const string ContractVersion = "0.9.0";
 
     /// <summary>父块长度告警阈值的临时调试默认值，非标准基准；正式值由样本 P95 标定。</summary>
     public const int ParentMaxCharsDebugDefault = 6000;
@@ -151,6 +151,9 @@ public sealed record RawChunk
     public bool StartsAtUnitBoundary { get; init; } = true;
 
     public bool EndsAtUnitBoundary { get; init; } = true;
+
+    /// <summary>祖先标题链，自最外层到最内层；由执行器产出，本仓只透传（C-17）。</summary>
+    public IReadOnlyList<string>? HeadingPath { get; init; }
 }
 
 /// <summary>契约切片的关系指针。</summary>
@@ -198,6 +201,9 @@ public sealed record ContractChunk
     public bool StartsAtUnitBoundary { get; init; } = true;
 
     public bool EndsAtUnitBoundary { get; init; } = true;
+
+    /// <summary>祖先标题链，继承自 RawChunk，原样透传保序（§6.1）。</summary>
+    public IReadOnlyList<string>? HeadingPath { get; init; }
 
     public ChunkRelations Relations { get; init; } = new();
 }

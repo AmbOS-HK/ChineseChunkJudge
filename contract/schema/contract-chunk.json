@@ -19,11 +19,13 @@
   "properties": {
     "chunkId": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9_-]*@[1-9][0-9]*#[0-9]+$"
+      "pattern": "^[a-z][a-z0-9_-]*@[1-9][0-9]*#[0-9]+$",
+      "description": "必须等于 {strategy}#{index}，由 CCJ-017 逐字校验。"
     },
     "index": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "description": "从 0 起连续且不重复；由 CCJ-017 强制。"
     },
     "text": {
       "type": "string"
@@ -46,7 +48,7 @@
     "charCount": {
       "type": "integer",
       "minimum": 0,
-      "description": "Unicode 码位数量。"
+      "description": "Unicode 码位数量；必须等于 text 的码位数，由 CCJ-017 强制。"
     },
     "unitKind": {
       "type": "string",
@@ -66,6 +68,11 @@
     "endsAtUnitBoundary": {
       "type": "boolean",
       "default": true
+    },
+    "headingPath": {
+      "type": "array",
+      "description": "祖先标题链，自最外层到最内层；继承自 RawChunk，原样透传保序（§6.1）。",
+      "items": { "type": "string" }
     },
     "relations": {
       "$ref": "#/$defs/relations"

@@ -1,13 +1,16 @@
+using System.Text.RegularExpressions;
 using ChineseChunkJudge.Core.Models;
 
 namespace ChineseChunkJudge.Core.Builders;
 
 /// <summary>
 /// 选型判定：按规则模板决策切分方式与参数，不执行切分。
-/// appliesTo 是部署侧选择模板的依据，Resolve 不做门类准入校验；决策只看 rules + 强制 fallback。
+/// 单模板形态下 appliesTo 不参与准入校验（0.7.1 行为）；模板集形态（0.8.0）按类别过滤后按数组顺序择优。
+/// 模板在进入选型前整体校验：所有规则（含未命中规则）都要合法，避免坏规则潜伏到命中时才报错。
 /// </summary>
 public sealed class TemplateResolver
 {
+    /// <summary>单模板选型（兼容形态，appliesTo 不参与准入）。</summary>
     public TemplateDecision Resolve(
         ChunkRuleTemplate template,
         IReadOnlyList<string> documentCategories,
@@ -17,11 +20,90 @@ public sealed class TemplateResolver
         ArgumentNullException.ThrowIfNull(documentCategories);
         ArgumentNullException.ThrowIfNull(traits);
 
-        if (!string.Equals(template.Decision.Fallback.ChunkMode, ChunkModes.Smart, StringComparison.Ordinal))
+        ValidateTemplate(template);
+        var decision = ResolveWithinTemplate(template, traits);
+        return decision with
         {
-            throw new ArgumentException("decision.fallback.chunkMode 契约固定为 smart。", nameof(template));
+            CandidateCount = 1,
+            SelectionReason = decision.UsedFallback
+                ? TemplateSelectionReasons.Fallback
+                : TemplateSelectionReasons.RuleMatched
+        };
+    }
+
+    /// <summary>
+    /// 模板集选型（0.8.0）：类别交集过滤 → 数组顺序即优先级 →
+    /// 取顺序最前的规则命中候选；全部未命中时取顺序最前候选的 fallback。
+    /// </summary>
+    public TemplateDecision Resolve(
+        IReadOnlyList<ChunkRuleTemplate> templates,
+        IReadOnlyList<string> documentCategories,
+        IReadOnlyList<string> traits)
+    {
+        ArgumentNullException.ThrowIfNull(templates);
+        ArgumentNullException.ThrowIfNull(documentCategories);
+        ArgumentNullException.ThrowIfNull(traits);
+
+        if (templates.Count == 0)
+        {
+            throw new ArgumentException("no_applicable_template：templates 不得为空。", nameof(templates));
         }
 
+        foreach (var template in templates)
+        {
+            ValidateTemplate(template);
+        }
+
+        var categorySet = documentCategories.ToHashSet(StringComparer.Ordinal);
+        var candidates = templates
+            .Where(t => t.AppliesTo.DocumentCategories.Any(categorySet.Contains))
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            throw new ArgumentException(
+                "no_applicable_template：没有任何模板的 appliesTo 与请求类别有交集。",
+                nameof(templates));
+        }
+
+        foreach (var candidate in candidates)
+        {
+            var decision = TryResolveWithinTemplate(candidate, traits);
+            if (decision is not null)
+            {
+                return decision with
+                {
+                    CandidateCount = candidates.Count,
+                    SelectionReason = TemplateSelectionReasons.RuleMatched
+                };
+            }
+        }
+
+        var fallback = BuildFallback(candidates[0]);
+        return fallback with
+        {
+            CandidateCount = candidates.Count,
+            SelectionReason = TemplateSelectionReasons.Fallback
+        };
+    }
+
+    private static TemplateDecision ResolveWithinTemplate(
+        ChunkRuleTemplate template,
+        IReadOnlyList<string> traits)
+    {
+        var matched = TryResolveWithinTemplate(template, traits);
+        if (matched is not null)
+        {
+            return matched;
+        }
+
+        return BuildFallback(template);
+    }
+
+    private static TemplateDecision? TryResolveWithinTemplate(
+        ChunkRuleTemplate template,
+        IReadOnlyList<string> traits)
+    {
         var documentTraits = traits.ToHashSet(StringComparer.Ordinal);
 
         for (int i = 0; i < template.Decision.Rules.Count; i++)
@@ -32,12 +114,13 @@ public sealed class TemplateResolver
                 continue;
             }
 
-            ValidateRule(rule, i);
             return new TemplateDecision
             {
                 TemplateId = template.TemplateId,
                 MatchedRuleIndex = i,
                 UsedFallback = false,
+                CandidateCount = 1,
+                SelectionReason = TemplateSelectionReasons.RuleMatched,
                 ChunkMode = rule.ChunkMode,
                 Pattern = rule.Pattern,
                 ChunkSize = rule.ChunkSize,
@@ -45,12 +128,19 @@ public sealed class TemplateResolver
             };
         }
 
+        return null;
+    }
+
+    private static TemplateDecision BuildFallback(ChunkRuleTemplate template)
+    {
         var fallback = template.Decision.Fallback;
         return new TemplateDecision
         {
             TemplateId = template.TemplateId,
             MatchedRuleIndex = null,
             UsedFallback = true,
+            CandidateCount = 1,
+            SelectionReason = TemplateSelectionReasons.Fallback,
             ChunkMode = fallback.ChunkMode,
             Pattern = null,
             ChunkSize = fallback.ChunkSize,
@@ -58,17 +148,73 @@ public sealed class TemplateResolver
         };
     }
 
+    private static void ValidateTemplate(ChunkRuleTemplate template)
+    {
+        ArgumentNullException.ThrowIfNull(template);
+
+        if (template.AppliesTo is null || template.Decision is null || template.Decision.Fallback is null)
+        {
+            throw new ArgumentException("invalid_template：appliesTo / decision / decision.fallback 均不得为空。", nameof(template));
+        }
+
+        ValidateFallback(template);
+
+        for (int i = 0; i < template.Decision.Rules.Count; i++)
+        {
+            ValidateRule(template.Decision.Rules[i], i);
+        }
+    }
+
+    private static void ValidateFallback(ChunkRuleTemplate template)
+    {
+        if (!string.Equals(template.Decision.Fallback.ChunkMode, ChunkModes.Smart, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("decision.fallback.chunkMode 契约固定为 smart。", nameof(template));
+        }
+
+        ValidateChunkSize(template.Decision.Fallback.ChunkSize, "decision.fallback");
+    }
+
     private static void ValidateRule(DecisionRule rule, int index)
     {
         bool isRegex = string.Equals(rule.ChunkMode, ChunkModes.Regex, StringComparison.Ordinal);
-        if (isRegex && string.IsNullOrWhiteSpace(rule.Pattern))
+
+        if (!isRegex
+            && !string.Equals(rule.ChunkMode, ChunkModes.Smart, StringComparison.Ordinal)
+            && !string.Equals(rule.ChunkMode, ChunkModes.Page, StringComparison.Ordinal))
         {
-            throw new ArgumentException($"decision.rules[{index}]：chunkMode=regex 时 pattern 必填。");
+            throw new ArgumentException($"decision.rules[{index}]：chunkMode 只能是 regex / smart / page。");
         }
 
-        if (!isRegex && rule.Pattern is not null)
+        ValidateChunkSize(rule.ChunkSize, $"decision.rules[{index}]");
+
+        if (isRegex)
+        {
+            if (string.IsNullOrWhiteSpace(rule.Pattern))
+            {
+                throw new ArgumentException($"decision.rules[{index}]：chunkMode=regex 时 pattern 必填。");
+            }
+
+            try
+            {
+                _ = new Regex(rule.Pattern, RegexOptions.None);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new ArgumentException($"decision.rules[{index}]：pattern 不是合法正则。", ex);
+            }
+        }
+        else if (rule.Pattern is not null)
         {
             throw new ArgumentException($"decision.rules[{index}]：非 regex 模式禁止携带 pattern。");
+        }
+    }
+
+    private static void ValidateChunkSize(int chunkSize, string location)
+    {
+        if (chunkSize is < 1 or > 1500)
+        {
+            throw new ArgumentException($"{location}.chunkSize 必须在 1..1500，实际为 {chunkSize}。");
         }
     }
 }

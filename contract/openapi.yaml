@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ChineseChunkJudge Adjudication API
-  version: 0.7.1
+  version: 0.9.0
   description: >-
     切片判定服务的 HTTP 契约。请求与响应结构引用 contract/schema 下的 JSON Schema，
     与 contract/rules.md 同属权威标准。参考实现为进程内库，本契约用于跨语言一致性验证。
@@ -195,10 +195,18 @@ components:
     TemplateResolveRequest:
       type: object
       additionalProperties: false
-      required: [template, documentCategories, traits]
+      required: [documentCategories, traits]
       properties:
         template:
           $ref: './schema/chunk-rule-template.json'
+          deprecated: true
+          description: 单模板（兼容保留至 1.0.0）。与 templates 恰好提供一个；该形态下 appliesTo 不参与准入。
+        templates:
+          type: array
+          minItems: 1
+          description: 候选模板集（0.8.0）。与 template 恰好提供一个；顺序即优先级。
+          items:
+            $ref: './schema/chunk-rule-template.json'
         documentCategories:
           type: array
           items:
@@ -210,16 +218,24 @@ components:
     TemplateDecision:
       type: object
       additionalProperties: false
-      required: [templateId, chunkMode, chunkSize, usedFallback]
+      required: [templateId, chunkMode, chunkSize, usedFallback, candidateCount, selectionReason]
       properties:
         templateId:
           type: string
+          description: 实际选中的模板 ID。
         matchedRuleIndex:
           type: integer
           minimum: 0
           description: 命中的规则下标；usedFallback=true 时缺省。
         usedFallback:
           type: boolean
+        candidateCount:
+          type: integer
+          minimum: 1
+          description: 经类别过滤后的候选模板数；单模板形态固定为 1。
+        selectionReason:
+          type: string
+          enum: [rule_matched, fallback]
         chunkMode:
           $ref: './schema/chunk-rule-template.json#/$defs/chunkMode'
         pattern:

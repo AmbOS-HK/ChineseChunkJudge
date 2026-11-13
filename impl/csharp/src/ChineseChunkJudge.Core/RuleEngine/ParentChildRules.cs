@@ -187,6 +187,11 @@ public sealed class ParentChildPairStructureRule : IChunkRule
 
         var parentIds = context.ParentChunks.Select(p => p.ParentChunkId).ToHashSet(StringComparer.Ordinal);
         var childIds = context.Chunks.Select(c => c.ChunkId).ToHashSet(StringComparer.Ordinal);
+        var chunksById = new Dictionary<string, ContractChunk>(StringComparer.Ordinal);
+        foreach (var chunk in context.Chunks)
+        {
+            chunksById[chunk.ChunkId] = chunk;
+        }
         var childToParents = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
         foreach (var group in context.ParentChunks.GroupBy(p => p.ParentChunkId, StringComparer.Ordinal).Where(g => g.Count() > 1))
@@ -236,6 +241,16 @@ public sealed class ParentChildPairStructureRule : IChunkRule
                 if (!childIds.Contains(childId))
                 {
                     yield return Issue(pair.ContextParentChunkId, $"childChunkIds 中的 {childId} 无法在子块集合中解析。");
+                }
+                else if (chunksById.TryGetValue(childId, out var childChunk))
+                {
+                    var childParentId = childChunk.Relations.ContextParentChunkId;
+                    if (childParentId is null || !string.Equals(childParentId, pair.ContextParentChunkId, StringComparison.Ordinal))
+                    {
+                        yield return Issue(
+                            childId,
+                            $"子块 {childId} 的 contextParentChunkId={childParentId ?? "null"} 与父侧配对 {pair.ContextParentChunkId} 不一致。");
+                    }
                 }
 
                 if (!childToParents.TryGetValue(childId, out var parents))
