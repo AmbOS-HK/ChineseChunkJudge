@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "name": "技术标准建议模板（未评测）",
   "appliesTo": {
-    "documentCategories": ["technical_standard"]
+    "documentCategories": ["standard"]
   },
   "decision": {
     "rules": [

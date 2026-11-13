@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "name": "操作手册建议模板（未评测）",
   "appliesTo": {
-    "documentCategories": ["manual"]
+    "documentCategories": ["operational_manual"]
   },
   "decision": {
     "rules": [

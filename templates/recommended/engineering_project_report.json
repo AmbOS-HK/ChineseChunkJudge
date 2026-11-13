@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "name": "工程/项目报告建议模板（未评测）",
   "appliesTo": {
-    "documentCategories": ["engineering_project_report"]
+    "documentCategories": ["project_report"]
   },
   "decision": {
     "rules": [

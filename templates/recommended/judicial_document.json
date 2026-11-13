@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "name": "司法文书建议模板（未评测）",
   "appliesTo": {
-    "documentCategories": ["judicial_document"]
+    "documentCategories": ["litigation_document"]
   },
   "decision": {
     "rules": [
