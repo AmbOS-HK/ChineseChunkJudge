@@ -22,6 +22,7 @@ public static class ChunkRuleIds
     public const string ParentChildDisabled = "CCJ-013";
     public const string ParentAliasConsistency = "CCJ-014";
     public const string HardCut = "CCJ-015";
+    public const string ChunkIdentity = "CCJ-016";
 }
 
 /// <summary>规则求值上下文。</summary>
@@ -318,6 +319,67 @@ public sealed class OverlapRule : IChunkRule
     }
 }
 
+/// <summary>CCJ-016：切片标识唯一且非空（单库、双库一律执行）。</summary>
+public sealed class ChunkIdentityRule : IChunkRule
+{
+    public string RuleId => ChunkRuleIds.ChunkIdentity;
+
+    public string Description => "chunkId 必须非空且全局唯一。";
+
+    public ChunkIssueSeverity Severity => ChunkIssueSeverity.Error;
+
+    public bool IsBaseRule => true;
+
+    public IEnumerable<ChunkIssue> Evaluate(ChunkValidationContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var chunk in context.Chunks)
+        {
+            string key = chunk.ChunkId ?? string.Empty;
+            counts.TryGetValue(key, out int count);
+            counts[key] = count + 1;
+        }
+
+        foreach (var (id, count) in counts)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                yield return new ChunkIssue
+                {
+                    RuleId = RuleId,
+                    Severity = Severity,
+                    Message = $"存在 {count} 个切片未填写 chunkId。",
+                    Detail = new Dictionary<string, string>
+                    {
+                        ["field"] = "chunkId",
+                        ["occurrences"] = count.ToString(CultureInfo.InvariantCulture)
+                    }
+                };
+                continue;
+            }
+
+            if (count > 1)
+            {
+                yield return new ChunkIssue
+                {
+                    RuleId = RuleId,
+                    Severity = Severity,
+                    ChunkId = id,
+                    Message = $"切片 ID {id} 重复出现 {count} 次，chunkId 必须全局唯一。",
+                    Detail = new Dictionary<string, string>
+                    {
+                        ["field"] = "chunkId",
+                        ["value"] = id,
+                        ["occurrences"] = count.ToString(CultureInfo.InvariantCulture)
+                    }
+                };
+            }
+        }
+    }
+}
+
 /// <summary>CCJ-007：策略选项非法。</summary>
 public sealed class InvalidOptionsRule : IChunkRule
 {
@@ -447,12 +509,13 @@ public sealed class ChunkRuleEngine
         ChunkRuleIds.ChildWithinParent,
         ChunkRuleIds.ParentChildDisabled,
         ChunkRuleIds.ParentAliasConsistency,
-        ChunkRuleIds.HardCut
+        ChunkRuleIds.HardCut,
+        ChunkRuleIds.ChunkIdentity
     };
 
     public IReadOnlyList<IChunkRule> Rules => _rules;
 
-    /// <summary>构造契约规定的十五条基础规则。</summary>
+    /// <summary>构造契约规定的十六条基础规则。</summary>
     public static IReadOnlyList<IChunkRule> CreateDefaultRules() =>
     [
         new MetadataCompletenessRule(),
@@ -469,7 +532,8 @@ public sealed class ChunkRuleEngine
         new ChildWithinParentRule(),
         new ParentChildDisabledRule(),
         new ParentAliasConsistencyRule(),
-        new HardCutRule()
+        new HardCutRule(),
+        new ChunkIdentityRule()
     ];
 
     /// <summary>注册扩展规则。编号必须唯一，扩展规则不得声明为基础规则。</summary>

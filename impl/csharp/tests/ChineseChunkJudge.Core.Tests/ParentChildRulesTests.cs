@@ -293,6 +293,32 @@ public sealed class ParentChildRulesTests
         Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ParentChildPairStructure && i.Message.Contains("内子块"));
     }
 
+    [Fact]
+    public void DuplicateChildIds_Fails_CCJ016()
+    {
+        var document = CreateDocument(SampleContent);
+        var (chunks, parents, pairs) = CreateValidDualLibrary();
+        chunks[1] = chunks[1] with { ChunkId = chunks[0].ChunkId };
+
+        var result = new ChunkValidator().Validate(document, chunks, EnabledOptions(), parents, pairs);
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ChunkIdentity && i.Message.Contains("重复出现"));
+    }
+
+    [Fact]
+    public void DanglingRelatedParent_Fails_CCJ008()
+    {
+        var document = CreateDocument(SampleContent);
+        var (chunks, parents, pairs) = CreateValidDualLibrary();
+        parents[0] = parents[0] with { RelatedContextParentIds = ["structure@600#missing"] };
+
+        var result = new ChunkValidator().Validate(document, chunks, EnabledOptions(), parents, pairs);
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ParentChildPairStructure && i.Message.Contains("跨父块引用") && i.Message.Contains("无法在父块集合中解析"));
+    }
+
     private static (List<ContractChunk> Chunks, List<ContextParentChunk> Parents, List<ContextParentChildPair> Pairs) CreateValidDualLibrary()
     {
         var chunks = new List<ContractChunk>

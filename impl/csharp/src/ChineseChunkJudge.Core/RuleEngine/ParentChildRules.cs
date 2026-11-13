@@ -170,7 +170,7 @@ public sealed class ParentChildPairStructureRule : IChunkRule
 {
     public string RuleId => ChunkRuleIds.ParentChildPairStructure;
 
-    public string Description => "childChunkIds 非空、ID 可解析、父子两侧一致、每个子块仅归属一个上下文父块。";
+    public string Description => "childChunkIds 非空、配对 ID 可解析、父子两侧一致、每个子块仅归属一个上下文父块，父块 ID 唯一且跨父块引用可解析。";
 
     public ChunkIssueSeverity Severity => ChunkIssueSeverity.Error;
 
@@ -192,6 +192,17 @@ public sealed class ParentChildPairStructureRule : IChunkRule
         foreach (var group in context.ParentChunks.GroupBy(p => p.ParentChunkId, StringComparer.Ordinal).Where(g => g.Count() > 1))
         {
             yield return Issue(group.Key, $"父块 ID {group.Key} 重复出现 {group.Count()} 次，父块标识必须唯一。");
+        }
+
+        foreach (var parent in context.ParentChunks)
+        {
+            foreach (var relatedId in parent.RelatedContextParentIds)
+            {
+                if (!parentIds.Contains(relatedId))
+                {
+                    yield return Issue(parent.ParentChunkId, $"父块 {parent.ParentChunkId} 的跨父块引用 {relatedId} 无法在父块集合中解析。");
+                }
+            }
         }
 
         foreach (var group in context.Pairs.GroupBy(p => p.ContextParentChunkId, StringComparer.Ordinal).Where(g => g.Count() > 1))

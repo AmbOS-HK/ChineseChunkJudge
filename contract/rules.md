@@ -2,7 +2,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| 契约版本 | 0.5.0 |
+| 契约版本 | 0.7.1 |
 | 状态 | 生效 |
 | 权威文件 | 本文件 + `contract/openapi.yaml` + `contract/schema/*.json` |
 | 适用范围 | 任意语言、任意实现产出的文本切片结果 |
@@ -39,6 +39,7 @@ ChineseChunkJudge 判定的是「切片结果是否符合契约」，不判定�
 | 切片规则模板 ChunkRuleTemplate | 选型判定（Spec 侧）契约：文档特征 → 切分方式 + 参数 + 验证口径 + 有序决策表，见第 13 节 |
 | 恰长硬切 | 切片长度恰好等于 `chunkSize` 且结尾不在允许句读集合（页码容错），由 CCJ-015 判定 |
 | 字符数 charCount | 文本的 Unicode 码位（code point）总数 |
+| 切片标识 chunkId | 切片的全局唯一身份，非空且不可重复，由 CCJ-016 强制 |
 
 ## 3. 数据流转
 
@@ -260,7 +261,7 @@ strategy = {type}@{targetSize}
 | `MAX_CHUNK_CHARS` | 1500 | 子块字符数**告警阈值**，任何选项不得放宽；CCJ-004 作用域仅 Child Chunk |
 | `PARENT_MAX_CHARS_DEBUG` | 6000 | 父块长度告警阈值的**临时调试默认值**，非标准基准；正式值由样本 P95 标定，契约不设全局硬封顶 |
 
-### 8.3 基础规则表（CCJ-001..CCJ-015）
+### 8.3 基础规则表（CCJ-001..CCJ-016）
 
 | 编号 | 级别 | 触发条件 | 输出要点 |
 | --- | --- | --- | --- |
@@ -271,7 +272,7 @@ strategy = {type}@{targetSize}
 | CCJ-005 | error | 偏移越界、`endOffset <= startOffset`、或 `text` 与原文该区间不一致 | 报告区间与差异类型 |
 | CCJ-006 | warning | 相邻切片区间重叠（前一块 `endOffset` > 后一块 `startOffset`） | 报告相邻切片对 |
 | CCJ-007 | error | 选项非法：`targetSize` 越界、`maxChunkSize > 1500`、`maxChunkSize < targetSize`、`minChunkSize` 越界、`overlap` 越界、`parentMaxChars` 非正整数、`chunkMode` 非法枚举 | 逐项报告非法参数 |
-| CCJ-008 | error | 配对结构不完整：`childChunkIds` 为空或数组内重复、ID 无法解析、父子两侧不一致、一个子块归属多个上下文父块、父块 ID 重复、同一父块存在多条配对 | 报告父块标识与问题类型 |
+| CCJ-008 | error | 配对结构不完整：`childChunkIds` 为空或数组内重复、ID 无法解析、父子两侧不一致、一个子块归属多个上下文父块、父块 ID 重复、子块 ID 重复、同一父块存在多条配对、跨父块引用 ID 无法解析 | 报告父块标识与问题类型 |
 | CCJ-009 | warning | 上下文父块 `charCount > parentMaxChars` | 报告实际字符数与阈值，与 CCJ-004 分开计数 |
 | CCJ-010 | error | 上下文父块区间重叠、非原文精确子串、或集合拼接后不等价于原文（未构成完整无重叠划分） | 报告区间与差异类型 |
 | CCJ-011 | warning | 跨父块引用存在环路（含自引用） | 报告环路路径 |
@@ -279,10 +280,11 @@ strategy = {type}@{targetSize}
 | CCJ-013 | error | `parentChild.enabled=false` 时输出存在 `parentChunks` 或 `contextParentChunkId`（含 `pairs` 内的声明） | 报告检出字段，判定不通过 |
 | CCJ-014 | warning | `parentChunkId`（deprecated）与 `structuralParentChunkId` 同时出现但值不一致 | 报告两个值 |
 | CCJ-015 | error | 恰长硬切：`charCount` 恰好等于 `chunkSize` 且结尾不在允许句读集合（页码容错）；`page` 模式豁免，父块不适用 | 报告子块标识、长度与结尾片段 |
+| CCJ-016 | error | 切片标识非法：`chunkId` 为空、纯空白或重复；单库与双库一律执行 | 报告 `chunkId` 与出现次数 |
 
 ### 8.4 基础规则的不可变性
 
-- CCJ-001..CCJ-015 全部为**基础规则**：不可删除、不可改编号、不可降级级别、不可改变判定条件。
+- CCJ-001..CCJ-016 全部为**基础规则**：不可删除、不可改编号、不可降级级别、不可改变判定条件。
 - 实现可以提供「扩展规则」新增校验，但**不得删除基础校验**，也不得用扩展规则豁免基础规则判出的问题。
 - 基础规则可以按需关闭输出级别（如将 warning 降为 info）仅限实现内部展示层，不得改变 `JudgeReport` 中的契约语义。
 - **长度校验作用域**：CCJ-004 作用域为 **Child Chunk**（阈值 1500，不可豁免）；上下文父块由 **CCJ-009** 独立约束（阈值 `parentMaxChars`，仅告警）。这是**规则作用域拆分**，不是对 CCJ-004 的豁免。
@@ -367,11 +369,26 @@ strategy = {type}@{targetSize}
 
 1. 修改 `contract/`：先改本文件，再改 `schema/*.json`，最后改 `openapi.yaml`。
 2. 同步 `impl/` 参考实现，补充对应单元测试。
-3. 版本号递增规则：
-   - 新增可选字段、扩展规则：补丁版本（`0.1.x`）；
-   - 新增必填字段、新增基础规则、收紧判定条件：次版本（`0.x.0`）；
-   - 删除字段、放宽核心约束、改变字段语义：主版本（`x.0.0`）。
+3. **版本号规则**（见 §12.1）：格式固定为 `MAJOR.MINOR.PATCH` 三段十进制，无前导零；三处必须同值。
 4. 禁止实现侧单方面修改核心字段；发现契约与实际不符时，先改契约再改实现。
+
+### 12.1 版本号规则（MAJOR.MINOR.PATCH）
+
+版本号固定三段：`MAJOR.MINOR.PATCH`，每段十进制、无前导零、不得跳号、不得回退。判定按下列顺序，命中即停：
+
+| 变更性质 | 版本位 | 判定位（命中即停） |
+| --- | --- | --- |
+| 删除字段、字段转必填、放宽判定条件、改变既有字段语义、改变规则级别 | `MAJOR` | 1 |
+| 新增字段（含可选）、新增基础规则、新增端点、收紧判定条件、新增枚举值 | `MINOR` | 2 |
+| 仅缺陷修复、契约文本澄清、文档/注释修订，不改任何可观察行为 | `PATCH` | 3 |
+
+补充约束：
+
+1. **三处同值**：`contract/rules.md` 表头、`contract/openapi.yaml` 的 `info.version`、C# `ContractConstants.ContractVersion` 必须一致；`openapi: 3.1.0` 是规范版本，永远不参与递增。
+2. **违规即缺陷**：任一处漏改或数值不一致，按契约缺陷处理，不得只改文档了事。
+3. **一次变更一个位**：同一批次只能递增一个段；若同时含 minor 与 patch 性质，取较高位。
+4. **可观察行为**是判定基准：字段增删、必填性、枚举、规则编号/级别/判定条件变化属可观察行为；纯措辞、示例、排版属不可观察。
+5. 0.x 阶段仍适用本规则；「只增不删、弃用别名 1.0.0 清理」的冻结约定优先于上表。
 
 ## 13. 切片规则模板 ChunkRuleTemplate（0.3.0，Spec 侧）
 

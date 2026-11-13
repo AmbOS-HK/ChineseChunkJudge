@@ -15,7 +15,7 @@ public static class ContractConstants
     public const string StrategyNamePattern = @"^[a-z][a-z0-9_-]*@[1-9][0-9]*$";
 
     /// <summary>契约版本号，与 contract/rules.md 表头一致。</summary>
-    public const string ContractVersion = "0.5.0";
+    public const string ContractVersion = "0.7.1";
 
     /// <summary>父块长度告警阈值的临时调试默认值，非标准基准；正式值由样本 P95 标定。</summary>
     public const int ParentMaxCharsDebugDefault = 6000;

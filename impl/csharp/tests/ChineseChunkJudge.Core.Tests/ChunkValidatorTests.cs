@@ -110,6 +110,39 @@ public sealed class ChunkValidatorTests
     }
 
     [Fact]
+    public void DuplicateChunkIds_Fails_CCJ016_InSingleLibrary()
+    {
+        var document = CreateDocument(SampleContent);
+        var chunks = new[]
+        {
+            CreateChunk(0, "第一段内容。", 0),
+            CreateChunk(1, "第二段内容。", 6)
+        };
+        chunks[1] = chunks[1] with { ChunkId = chunks[0].ChunkId };
+
+        var result = new ChunkValidator().Validate(document, chunks);
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ChunkIdentity && i.Detail!["occurrences"] == "2");
+    }
+
+    [Fact]
+    public void EmptyChunkId_Fails_CCJ016()
+    {
+        var document = CreateDocument(SampleContent);
+        var chunks = new[]
+        {
+            CreateChunk(0, "第一段内容。", 0) with { ChunkId = "  " },
+            CreateChunk(1, "第二段内容。", 6)
+        };
+
+        var result = new ChunkValidator().Validate(document, chunks);
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ChunkIdentity && i.Detail!["field"] == "chunkId");
+    }
+
+    [Fact]
     public void InvalidOptions_ReportsError_CCJ007()
     {
         var document = CreateDocument(SampleContent);
@@ -189,7 +222,7 @@ public sealed class ChunkValidatorTests
         Assert.Equal("structure@600", report.Strategy);
         Assert.Equal(2, report.Summary.ChunkCount);
         Assert.Equal(12, report.Summary.TotalCharCount);
-        Assert.Equal(15, report.AppliedRules.Count);
+        Assert.Equal(16, report.AppliedRules.Count);
     }
 
     [Fact]

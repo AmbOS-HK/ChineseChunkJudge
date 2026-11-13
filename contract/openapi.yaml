@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ChineseChunkJudge Adjudication API
-  version: 0.5.0
+  version: 0.7.1
   description: >-
     切片判定服务的 HTTP 契约。请求与响应结构引用 contract/schema 下的 JSON Schema，
     与 contract/rules.md 同属权威标准。参考实现为进程内库，本契约用于跨语言一致性验证。
