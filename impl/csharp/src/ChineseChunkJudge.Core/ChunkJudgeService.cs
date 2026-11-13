@@ -130,6 +130,32 @@ public sealed class ChunkJudgeService
         ArgumentNullException.ThrowIfNull(pairs);
 
         var chunks = Normalize(document, rawChunks, options);
+
+        // 父侧 childChunkIds 为权威，子侧 contextParentChunkId 为派生视图（§7.3）：
+        // RawChunk 不携带关系指针，必须按 pairs 回填，否则 summary 的子块归属统计恒为 0。
+        var childToParent = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var pair in pairs)
+        {
+            if (pair.ChildChunkIds is null)
+            {
+                continue;
+            }
+
+            foreach (var childId in pair.ChildChunkIds)
+            {
+                childToParent.TryAdd(childId, pair.ContextParentChunkId);
+            }
+        }
+
+        if (childToParent.Count > 0)
+        {
+            chunks = chunks
+                .Select(c => childToParent.TryGetValue(c.ChunkId, out var parentId)
+                    ? c with { Relations = c.Relations with { ContextParentChunkId = parentId } }
+                    : c)
+                .ToList();
+        }
+
         return BuildReport(document, chunks, options, parentChunks, pairs);
     }
 
@@ -217,6 +243,7 @@ public sealed class ChunkJudgeService
             ParentChunkCount = parentChunks.Count,
             ChildWithParentCount = childWithParent,
             ParentCoverageRatio = chunks.Count == 0 ? 0d : (double)childWithParent / chunks.Count,
+            ChildWithParentRatio = chunks.Count == 0 ? 0d : (double)childWithParent / chunks.Count,
             ParentCharP95 = Percentile95(parentSizes),
             OversizedParentChunkCount = parentSizes.Count(s => s > threshold),
             HardCutChunkCount = string.Equals(options.ChunkMode, ChunkModes.Page, StringComparison.Ordinal)

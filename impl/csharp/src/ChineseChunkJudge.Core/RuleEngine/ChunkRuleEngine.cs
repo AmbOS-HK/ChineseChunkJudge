@@ -367,6 +367,23 @@ public sealed class InvalidOptionsRule : IChunkRule
         {
             yield return CreateIssue("parentMaxChars", parentChild.ParentMaxChars, ">= 1");
         }
+
+        if (options.ChunkMode is { } chunkMode
+            && chunkMode != ChunkModes.Regex && chunkMode != ChunkModes.Smart && chunkMode != ChunkModes.Page)
+        {
+            yield return new ChunkIssue
+            {
+                RuleId = RuleId,
+                Severity = Severity,
+                Message = $"策略选项 chunkMode={chunkMode} 非法，合法枚举 regex / smart / page。",
+                Detail = new Dictionary<string, string>
+                {
+                    ["option"] = "chunkMode",
+                    ["value"] = chunkMode,
+                    ["expected"] = "regex|smart|page"
+                }
+            };
+        }
     }
 
     private ChunkIssue CreateIssue(string name, int value, string expected)

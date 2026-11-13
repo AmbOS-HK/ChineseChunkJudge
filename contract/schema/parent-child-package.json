@@ -108,8 +108,9 @@
         },
         "childChunkIds": {
           "type": "array",
-          "description": "非空；1:N 为主，1:1 为合法边界，不告警。",
+          "description": "非空且不重复；1:N 为主，1:1 为合法边界，不告警。",
           "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "type": "string",
             "minLength": 1

@@ -77,7 +77,7 @@ ChineseChunkJudge/
 
 修改顺序固定：**先改 `contract/`，再同步 `impl/`**。参考实现不得私自增删契约核心字段，也不得删除或降级基础校验规则。
 
-当前契约版本 **0.3.0**：基础规则 CCJ-001..CCJ-015；0.2.0 落地双库产物 `ParentChildPackage`（默认关闭）与双父指针（`parentChunkId` 弃用保留至 1.0.0）；0.3.0 落地 Spec 侧 `ChunkRuleTemplate`（`/templates/resolve` 选型判定，强制 smart 兜底）与 CCJ-015 恰长硬切（error）。C# 参考实现已同步，`dotnet build` 0 警告 0 错误、36 项单元测试全部通过（2026-11-13）。
+当前契约版本 **0.5.0**：基础规则 CCJ-001..CCJ-015；0.2.0 落地双库产物 `ParentChildPackage`（默认关闭）与双父指针（`parentChunkId` 弃用保留至 1.0.0）；0.3.0 落地 Spec 侧 `ChunkRuleTemplate`（`/templates/resolve` 选型判定，强制 smart 兜底）与 CCJ-015 恰长硬切（error）；0.4.0 将 summary 的 `parentCoverageRatio` 更名为 `childWithParentRatio`（旧字段弃用保留至 1.0.0）；0.5.0 由 CCJ-008 补齐父块 ID / 配对 / pair 内子块的重复检测。C# 参考实现已同步，`dotnet build` 0 警告 0 错误、44 项单元测试全部通过（2026-11-13）。
 
 ## 参考实现
 

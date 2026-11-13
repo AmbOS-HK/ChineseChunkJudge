@@ -2,7 +2,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| 契约版本 | 0.3.0 |
+| 契约版本 | 0.5.0 |
 | 状态 | 生效 |
 | 权威文件 | 本文件 + `contract/openapi.yaml` + `contract/schema/*.json` |
 | 适用范围 | 任意语言、任意实现产出的文本切片结果 |
@@ -239,7 +239,7 @@ strategy = {type}@{targetSize}
 
 配对基数：一个 contextParent 可绑定多个 childChunk（1:N），允许 1:1。父块侧 `childChunkIds[]` 为**权威来源**，子块侧 `contextParentChunkId` 为派生视图，两侧不一致由 **CCJ-008** 检出。
 
-`parentChild.enabled=false` 时，输出中不得携带 `parentChunks` / `contextParentChunkId`，检出触发 **CCJ-013**（**error，`passed=false`**）。
+`parentChild.enabled=false` 时，输出中不得携带 `parentChunks` / `contextParentChunkId`（含 `pairs` 内的声明），检出触发 **CCJ-013**（**error，`passed=false`**）。RawChunk 不携带关系指针，实现必须按父侧 `childChunkIds[]` 回填子侧派生视图，否则归属统计失真。
 
 ## 8. 判定规则
 
@@ -270,13 +270,13 @@ strategy = {type}@{targetSize}
 | CCJ-004 | warning | `charCount > 1500` | 报告实际字符数 |
 | CCJ-005 | error | 偏移越界、`endOffset <= startOffset`、或 `text` 与原文该区间不一致 | 报告区间与差异类型 |
 | CCJ-006 | warning | 相邻切片区间重叠（前一块 `endOffset` > 后一块 `startOffset`） | 报告相邻切片对 |
-| CCJ-007 | error | 选项非法：`targetSize` 越界、`maxChunkSize > 1500`、`maxChunkSize < targetSize`、`minChunkSize` 越界、`overlap` 越界、`parentMaxChars` 非正整数 | 逐项报告非法参数 |
-| CCJ-008 | error | 配对结构不完整：`childChunkIds` 为空、ID 无法解析、父子两侧不一致、一个子块归属多个上下文父块 | 报告父块标识与问题类型 |
+| CCJ-007 | error | 选项非法：`targetSize` 越界、`maxChunkSize > 1500`、`maxChunkSize < targetSize`、`minChunkSize` 越界、`overlap` 越界、`parentMaxChars` 非正整数、`chunkMode` 非法枚举 | 逐项报告非法参数 |
+| CCJ-008 | error | 配对结构不完整：`childChunkIds` 为空或数组内重复、ID 无法解析、父子两侧不一致、一个子块归属多个上下文父块、父块 ID 重复、同一父块存在多条配对 | 报告父块标识与问题类型 |
 | CCJ-009 | warning | 上下文父块 `charCount > parentMaxChars` | 报告实际字符数与阈值，与 CCJ-004 分开计数 |
 | CCJ-010 | error | 上下文父块区间重叠、非原文精确子串、或集合拼接后不等价于原文（未构成完整无重叠划分） | 报告区间与差异类型 |
 | CCJ-011 | warning | 跨父块引用存在环路（含自引用） | 报告环路路径 |
 | CCJ-012 | error | 子块区间未落在其归属 contextParent 区间内 | 报告子块与父块区间 |
-| CCJ-013 | error | `parentChild.enabled=false` 时输出存在 `parentChunks` 或 `contextParentChunkId` | 报告检出字段，判定不通过 |
+| CCJ-013 | error | `parentChild.enabled=false` 时输出存在 `parentChunks` 或 `contextParentChunkId`（含 `pairs` 内的声明） | 报告检出字段，判定不通过 |
 | CCJ-014 | warning | `parentChunkId`（deprecated）与 `structuralParentChunkId` 同时出现但值不一致 | 报告两个值 |
 | CCJ-015 | error | 恰长硬切：`charCount` 恰好等于 `chunkSize` 且结尾不在允许句读集合（页码容错）；`page` 模式豁免，父块不适用 | 报告子块标识、长度与结尾片段 |
 
@@ -324,7 +324,8 @@ strategy = {type}@{targetSize}
 | `oversizedChunkCount` | integer | 超过 1500 字符的切片数量 |
 | `parentChunkCount` | integer | 上下文父块总数，无双库产物时为 0 |
 | `childWithParentCount` | integer | 绑定到上下文父块的子块数量 |
-| `parentCoverageRatio` | number | `childWithParentCount` / 子块总数；无子块时为 0 |
+| `parentCoverageRatio` | number | **deprecated**，1.0.0 移除；语义等同 `childWithParentRatio`，实为子块归属比例，命名易误读为父块文本覆盖率 |
+| `childWithParentRatio` | number | `childWithParentCount` / 子块总数；无子块时为 0。0.4.0 起为正式字段 |
 | `parentCharP95` | integer | 上下文父块字符长度 P95（四舍五入取整），无父块时为 0 |
 | `oversizedParentChunkCount` | integer | 超过 `parentMaxChars` 的父块数量，与 `oversizedChunkCount` 独立累加 |
 | `hardCutChunkCount` | integer | 恰长硬切子块数量（CCJ-015），验收口径为每文档必须为 0 |

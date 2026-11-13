@@ -27,6 +27,7 @@ public sealed class ParentChildRulesTests
         Assert.Equal(2, report.Summary.ParentChunkCount);
         Assert.Equal(4, report.Summary.ChildWithParentCount);
         Assert.Equal(1d, report.Summary.ParentCoverageRatio);
+        Assert.Equal(1d, report.Summary.ChildWithParentRatio);
         Assert.Equal(8, report.Summary.ParentCharP95);
         Assert.Equal(0, report.Summary.OversizedParentChunkCount);
         Assert.Contains(report.AppliedRules, r => r.RuleId == ChunkRuleIds.ParentCoverage && r.IsBaseRule);
@@ -200,6 +201,96 @@ public sealed class ParentChildRulesTests
 
         Assert.False(result.Passed);
         Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.InvalidOptions && i.Detail!["option"] == "parentMaxChars");
+    }
+
+    [Fact]
+    public void RawJudge_DerivesChildContextParentFromPairs()
+    {
+        var document = CreateDocument(SampleContent);
+        var (_, parents, pairs) = CreateValidDualLibrary();
+        var raws = new[]
+        {
+            new RawChunk { Index = 0, Text = "第一段。", StartOffset = 0, EndOffset = 4 },
+            new RawChunk { Index = 1, Text = "第二段。", StartOffset = 4, EndOffset = 8 },
+            new RawChunk { Index = 2, Text = "第三段。", StartOffset = 8, EndOffset = 12 },
+            new RawChunk { Index = 3, Text = "第四段。", StartOffset = 12, EndOffset = 16 }
+        };
+
+        var report = new ChunkJudgeService().Judge(document, raws, EnabledOptions(), parents, pairs);
+
+        Assert.True(report.Passed);
+        Assert.Equal(4, report.Summary.ChildWithParentCount);
+        Assert.Equal(1d, report.Summary.ParentCoverageRatio);
+        Assert.Equal(1d, report.Summary.ChildWithParentRatio);
+        Assert.DoesNotContain(report.Issues, i => i.RuleId == ChunkRuleIds.ParentChildPairStructure);
+    }
+
+    [Fact]
+    public void DisabledWithPairsOnly_Fails_CCJ013()
+    {
+        var document = CreateDocument(SampleContent);
+        var chunks = new List<ContractChunk> { CreateChunk(0, "第一段。", 0) };
+        var pairs = new List<ContextParentChildPair>
+        {
+            new() { ContextParentChunkId = "structure@600#p0", ChildChunkIds = ["structure@600#0"] }
+        };
+        var options = new ChunkStrategyOptions { StrategyType = "structure", TargetSize = 600 };
+
+        var result = new ChunkValidator().Validate(document, chunks, options, [], pairs);
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ParentChildDisabled && i.Detail!["field"] == "pairs");
+    }
+
+    [Fact]
+    public void SelfReference_ReportsExactlyOnce()
+    {
+        var document = CreateDocument(SampleContent);
+        var (chunks, parents, pairs) = CreateValidDualLibrary();
+        parents[0] = parents[0] with { RelatedContextParentIds = ["structure@600#p0"] };
+
+        var result = new ChunkValidator().Validate(document, chunks, EnabledOptions(), parents, pairs);
+
+        Assert.Single(result.Issues, i => i.RuleId == ChunkRuleIds.ParentReferenceCycle);
+    }
+
+    [Fact]
+    public void DuplicateParentIds_Fails_CCJ008()
+    {
+        var document = CreateDocument(SampleContent);
+        var (chunks, parents, pairs) = CreateValidDualLibrary();
+        parents.Add(parents[0] with { });
+
+        var result = new ChunkValidator().Validate(document, chunks, EnabledOptions(), parents, pairs);
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ParentChildPairStructure && i.Message.Contains("重复出现"));
+    }
+
+    [Fact]
+    public void DuplicatePairsForSameParent_Fails_CCJ008()
+    {
+        var document = CreateDocument(SampleContent);
+        var (chunks, parents, pairs) = CreateValidDualLibrary();
+        pairs.Add(pairs[0] with { });
+
+        var result = new ChunkValidator().Validate(document, chunks, EnabledOptions(), parents, pairs);
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ParentChildPairStructure && i.Message.Contains("只允许一条配对"));
+    }
+
+    [Fact]
+    public void DuplicateChildWithinPair_Fails_CCJ008()
+    {
+        var document = CreateDocument(SampleContent);
+        var (chunks, parents, pairs) = CreateValidDualLibrary();
+        pairs[0] = pairs[0] with { ChildChunkIds = ["structure@600#0", "structure@600#0", "structure@600#1"] };
+
+        var result = new ChunkValidator().Validate(document, chunks, EnabledOptions(), parents, pairs);
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ParentChildPairStructure && i.Message.Contains("内子块"));
     }
 
     private static (List<ContractChunk> Chunks, List<ContextParentChunk> Parents, List<ContextParentChildPair> Pairs) CreateValidDualLibrary()

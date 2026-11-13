@@ -176,6 +176,19 @@ public sealed class RuleTemplateAndHardCutTests
         Assert.False(report.Passed);
     }
 
+    [Fact]
+    public void InvalidChunkMode_Fails_CCJ007()
+    {
+        string text = new string('文', 10) + "。";
+        var (document, chunks, options) = CreateCase(text);
+        options = options with { ChunkMode = "recursive" };
+
+        var result = new ChunkValidator().Validate(document, chunks, options);
+
+        Assert.False(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.InvalidOptions && i.Detail!["option"] == "chunkMode");
+    }
+
     private static (DocumentFeature Document, ContractChunk[] Chunks, ChunkStrategyOptions Options) CreateCase(string text)
     {
         var document = CreateDocument(text);

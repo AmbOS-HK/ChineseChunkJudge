@@ -48,6 +48,21 @@ public sealed class ParentChildDisabledRule : IChunkRule
             };
         }
 
+        if (context.Pairs.Count > 0)
+        {
+            yield return new ChunkIssue
+            {
+                RuleId = RuleId,
+                Severity = Severity,
+                Message = $"双库开关 enabled=false，但输出携带 {context.Pairs.Count} 条父子配对（内含 contextParentChunkId 声明）。",
+                Detail = new Dictionary<string, string>
+                {
+                    ["field"] = "pairs",
+                    ["count"] = context.Pairs.Count.ToString(CultureInfo.InvariantCulture)
+                }
+            };
+        }
+
         foreach (var chunk in context.Chunks)
         {
             if (chunk.Relations.ContextParentChunkId is not null)
@@ -174,8 +189,26 @@ public sealed class ParentChildPairStructureRule : IChunkRule
         var childIds = context.Chunks.Select(c => c.ChunkId).ToHashSet(StringComparer.Ordinal);
         var childToParents = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
+        foreach (var group in context.ParentChunks.GroupBy(p => p.ParentChunkId, StringComparer.Ordinal).Where(g => g.Count() > 1))
+        {
+            yield return Issue(group.Key, $"父块 ID {group.Key} 重复出现 {group.Count()} 次，父块标识必须唯一。");
+        }
+
+        foreach (var group in context.Pairs.GroupBy(p => p.ContextParentChunkId, StringComparer.Ordinal).Where(g => g.Count() > 1))
+        {
+            yield return Issue(group.Key, $"父块 {group.Key} 存在 {group.Count()} 条配对，同一父块只允许一条配对。");
+        }
+
         foreach (var pair in context.Pairs)
         {
+            if (pair.ChildChunkIds is not null)
+            {
+                foreach (var duplicate in pair.ChildChunkIds.GroupBy(id => id, StringComparer.Ordinal).Where(g => g.Count() > 1))
+                {
+                    yield return Issue(pair.ContextParentChunkId, $"父块 {pair.ContextParentChunkId} 的 childChunkIds 内子块 {duplicate.Key} 重复 {duplicate.Count()} 次。");
+                }
+            }
+
             if (!parentIds.Contains(pair.ContextParentChunkId))
             {
                 yield return Issue(null, $"配对的 contextParentChunkId={pair.ContextParentChunkId} 无法在父块集合中解析。");
@@ -335,7 +368,12 @@ public sealed class ParentReferenceCycleRule : IChunkRule
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var edges = context.ParentChunks.ToDictionary(p => p.ParentChunkId, p => p.RelatedContextParentIds, StringComparer.Ordinal);
+        var edges = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        foreach (var parent in context.ParentChunks)
+        {
+            // 重复父块 ID 由 CCJ-008 报告，这里保留首个，避免字典构造抛异常中断判定。
+            edges.TryAdd(parent.ParentChunkId, parent.RelatedContextParentIds);
+        }
 
         foreach (var (parentId, related) in edges)
         {
@@ -381,7 +419,8 @@ public sealed class ParentReferenceCycleRule : IChunkRule
             {
                 foreach (var next in related)
                 {
-                    if (!edges.ContainsKey(next))
+                    // 自引用已在上方单独报告，DFS 中跳过，避免同一问题重复计数。
+                    if (string.Equals(next, id, StringComparison.Ordinal) || !edges.ContainsKey(next))
                     {
                         continue;
                     }
@@ -427,7 +466,11 @@ public sealed class ChildWithinParentRule : IChunkRule
             yield break;
         }
 
-        var parents = context.ParentChunks.ToDictionary(p => p.ParentChunkId, StringComparer.Ordinal);
+        var parents = new Dictionary<string, ContextParentChunk>(StringComparer.Ordinal);
+        foreach (var parent in context.ParentChunks)
+        {
+            parents.TryAdd(parent.ParentChunkId, parent);
+        }
         foreach (var chunk in context.Chunks)
         {
             var parentId = chunk.Relations.ContextParentChunkId;

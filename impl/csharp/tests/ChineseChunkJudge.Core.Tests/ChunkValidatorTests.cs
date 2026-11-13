@@ -94,6 +94,22 @@ public sealed class ChunkValidatorTests
     }
 
     [Fact]
+    public void OverlappingChunks_ReportsWarning_CCJ006()
+    {
+        var document = CreateDocument(SampleContent);
+        var chunks = new[]
+        {
+            CreateChunk(0, "第一段内容。第", 0),
+            CreateChunk(1, "第二段内容。", 6)
+        };
+
+        var result = new ChunkValidator().Validate(document, chunks);
+
+        Assert.True(result.Passed);
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.Overlap && i.Severity == ChunkIssueSeverity.Warning);
+    }
+
+    [Fact]
     public void InvalidOptions_ReportsError_CCJ007()
     {
         var document = CreateDocument(SampleContent);

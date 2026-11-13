@@ -15,7 +15,7 @@ public static class ContractConstants
     public const string StrategyNamePattern = @"^[a-z][a-z0-9_-]*@[1-9][0-9]*$";
 
     /// <summary>契约版本号，与 contract/rules.md 表头一致。</summary>
-    public const string ContractVersion = "0.3.0";
+    public const string ContractVersion = "0.5.0";
 
     /// <summary>父块长度告警阈值的临时调试默认值，非标准基准；正式值由样本 P95 标定。</summary>
     public const int ParentMaxCharsDebugDefault = 6000;
@@ -245,8 +245,11 @@ public sealed record ChunkReportSummary
 
     public int ChildWithParentCount { get; init; }
 
-    /// <summary>childWithParentCount / 子块总数；无子块时为 0。</summary>
+    /// <summary>deprecated，1.0.0 移除；语义等同 ChildWithParentRatio。</summary>
     public double ParentCoverageRatio { get; init; }
+
+    /// <summary>childWithParentCount / 子块总数；无子块时为 0。0.4.0 起为正式字段。</summary>
+    public double ChildWithParentRatio { get; init; }
 
     public int ParentCharP95 { get; init; }
 

@@ -73,6 +73,7 @@
         "parentChunkCount",
         "childWithParentCount",
         "parentCoverageRatio",
+        "childWithParentRatio",
         "parentCharP95",
         "oversizedParentChunkCount",
         "hardCutChunkCount"
@@ -90,7 +91,12 @@
         "parentCoverageRatio": {
           "type": "number",
           "minimum": 0,
-          "description": "childWithParentCount / 子块总数；无子块时为 0。"
+          "description": "deprecated，1.0.0 移除。语义等同 childWithParentRatio（子块归属比例）。"
+        },
+        "childWithParentRatio": {
+          "type": "number",
+          "minimum": 0,
+          "description": "childWithParentCount / 子块总数；无子块时为 0。0.4.0 起为正式字段。"
         },
         "parentCharP95": { "type": "integer", "minimum": 0 },
         "oversizedParentChunkCount": {
