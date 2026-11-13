@@ -1,12 +1,40 @@
+using System.Reflection;
 using System.Text.Json;
 using ChineseChunkJudge.Core;
 using ChineseChunkJudge.Core.Abstractions;
 using ChineseChunkJudge.Core.Models;
 
+// Demo 不内置任何切分算法。执行器必须来自仓库外的插件程序集，
+// 通过 --plugin 传入；未提供插件时打印用法并以非零码退出，不输出伪造报告。
+
+if (!TryParseArgs(args, out string? pluginPath, out string? typeName, out int targetSize))
+{
+    PrintUsage();
+    return 2;
+}
+
+if (!File.Exists(pluginPath))
+{
+    Console.Error.WriteLine($"插件程序集不存在：{pluginPath}");
+    PrintUsage();
+    return 3;
+}
+
+IChunkExecutor executor;
+try
+{
+    executor = LoadExecutor(pluginPath, typeName);
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"加载插件执行器失败：{ex.Message}");
+    return 4;
+}
+
 var content = """
 # 切片判定契约样例文档
 
-本样例用于演示 ChineseChunkJudge 的判定流程：先把一份带结构的文档交给切片执行器，产出原始切片；再补齐元信息、字符数与关系指针，得到契约切片；最后由规则引擎给出判定报告。样例中的文档、策略与报告结构都可以直接替换成真实业务数据。
+本样例用于演示 ChineseChunkJudge 的判定流程：先把一份带结构的文档交给外部插件执行器，产出原始切片；再补齐元信息、字符数与关系指针，得到契约切片；最后由规则引擎给出判定报告。样例中的文档、策略与报告结构都可以直接替换成真实业务数据，切分算法本身不在本仓库内。
 
 ## 第一章 适用范围
 
@@ -42,187 +70,84 @@ var document = new DocumentFeature
 
 var options = new ChunkStrategyOptions
 {
-    StrategyType = "structure",
-    TargetSize = 600
+    StrategyType = executor.StrategyType,
+    TargetSize = targetSize
 };
 
 var service = new ChunkJudgeService();
-var report = service.JudgeWithExecutor(document, new StructureExecutor(), options);
+var report = service.JudgeWithExecutor(document, executor, options);
 
 Console.WriteLine(JsonSerializer.Serialize(report, ChunkJson.CreateOptions()));
+return 0;
 
-/// <summary>
-/// 结构优先执行器（演示用）：按标题/段落单元贪心装箱，
-/// 单个单元超过硬上限时按中文句末标点二次切分，保证不产生超限块。
-/// </summary>
-internal sealed class StructureExecutor : IChunkExecutor
+static bool TryParseArgs(string[] args, out string? pluginPath, out string? typeName, out int targetSize)
 {
-    public string StrategyType => "structure";
+    pluginPath = null;
+    typeName = null;
+    targetSize = 600;
 
-    public IReadOnlyList<RawChunk> Execute(DocumentFeature document, ChunkStrategyOptions options)
+    for (int i = 0; i < args.Length; i++)
     {
-        ArgumentNullException.ThrowIfNull(document);
-        ArgumentNullException.ThrowIfNull(options);
-
-        int limit = Math.Min(options.TargetSize, options.MaxChunkSize);
-        var units = SplitIntoUnits(document.Content, options.MaxChunkSize);
-        var chunks = new List<RawChunk>();
-
-        int? start = null;
-        int end = 0;
-        string? unitKind = null;
-        int? level = null;
-
-        foreach (var unit in units)
+        switch (args[i])
         {
-            int unitEnd = unit.Start + unit.Length;
-            if (start.HasValue && unitEnd - start.Value > limit)
-            {
-                chunks.Add(CreateChunk(document.Content, chunks.Count, start.Value, end, unitKind, level));
-                start = null;
-            }
-
-            if (!start.HasValue)
-            {
-                start = unit.Start;
-                unitKind = unit.Kind;
-                level = unit.Level;
-            }
-
-            end = unitEnd;
-        }
-
-        if (start.HasValue)
-        {
-            chunks.Add(CreateChunk(document.Content, chunks.Count, start.Value, end, unitKind, level));
-        }
-
-        return chunks;
-    }
-
-    private static RawChunk CreateChunk(string content, int index, int start, int end, string? unitKind, int? level) => new()
-    {
-        Index = index,
-        Text = content.Substring(start, end - start),
-        StartOffset = start,
-        EndOffset = end,
-        UnitKind = unitKind,
-        StructureLevel = level,
-        StartsAtUnitBoundary = true,
-        EndsAtUnitBoundary = true
-    };
-
-    private static IReadOnlyList<Unit> SplitIntoUnits(string content, int maxUnitLength)
-    {
-        var units = new List<Unit>();
-        int lineStart = 0;
-        int paragraphStart = -1;
-
-        void FlushParagraph(int endOffset)
-        {
-            if (paragraphStart >= 0 && endOffset > paragraphStart)
-            {
-                units.Add(new Unit(paragraphStart, endOffset - paragraphStart, "paragraph", null));
-                paragraphStart = -1;
-            }
-        }
-
-        while (true)
-        {
-            int newlineIndex = content.IndexOf('\n', lineStart);
-            int lineEnd = newlineIndex < 0 ? content.Length : newlineIndex;
-            string line = content.Substring(lineStart, lineEnd - lineStart).TrimEnd('\r');
-            string trimmed = line.TrimStart();
-
-            if (trimmed.StartsWith("#", StringComparison.Ordinal))
-            {
-                FlushParagraph(lineStart);
-                units.Add(new Unit(lineStart, lineEnd - lineStart, ContractConstants.HeadingUnitKind, CountHeadingLevel(trimmed)));
-            }
-            else if (line.Trim().Length == 0)
-            {
-                FlushParagraph(lineStart);
-            }
-            else if (paragraphStart < 0)
-            {
-                paragraphStart = lineStart;
-            }
-
-            if (newlineIndex < 0)
-            {
+            case "--plugin" when i + 1 < args.Length:
+                pluginPath = args[++i];
                 break;
-            }
-
-            lineStart = newlineIndex + 1;
-        }
-
-        FlushParagraph(content.Length);
-        return SplitOversizedUnits(content, units, maxUnitLength);
-    }
-
-    private static IReadOnlyList<Unit> SplitOversizedUnits(string content, IReadOnlyList<Unit> units, int maxUnitLength)
-    {
-        if (maxUnitLength <= 0)
-        {
-            maxUnitLength = 1;
-        }
-
-        var result = new List<Unit>();
-        foreach (var unit in units)
-        {
-            int unitEnd = unit.Start + unit.Length;
-            if (unit.Length <= maxUnitLength)
-            {
-                result.Add(unit);
-                continue;
-            }
-
-            int offset = unit.Start;
-            while (unitEnd - offset > maxUnitLength)
-            {
-                int cut = FindCut(content, offset + maxUnitLength, offset, unitEnd);
-                result.Add(new Unit(offset, cut - offset, unit.Kind, unit.Level));
-                offset = cut;
-            }
-
-            if (unitEnd > offset)
-            {
-                result.Add(new Unit(offset, unitEnd - offset, unit.Kind, unit.Level));
-            }
-        }
-
-        return result;
-    }
-
-    private static int FindCut(string content, int preferred, int start, int end)
-    {
-        for (int i = Math.Min(preferred, end); i > start; i--)
-        {
-            char c = content[i - 1];
-            if (c is '。' or '！' or '？' or '；' or '\n')
-            {
-                return i;
-            }
-        }
-
-        return Math.Min(preferred, end);
-    }
-
-    private static int CountHeadingLevel(string trimmedLine)
-    {
-        int level = 0;
-        foreach (char c in trimmedLine)
-        {
-            if (c != '#')
-            {
+            case "--type" when i + 1 < args.Length:
+                typeName = args[++i];
                 break;
-            }
-
-            level++;
+            case "--size" when i + 1 < args.Length && int.TryParse(args[i + 1], out int parsed):
+                targetSize = parsed;
+                i++;
+                break;
+            default:
+                return false;
         }
-
-        return Math.Max(level, 1);
     }
 
-    private sealed record Unit(int Start, int Length, string Kind, int? Level);
+    return !string.IsNullOrWhiteSpace(pluginPath) && targetSize >= 1 && targetSize <= ContractConstants.MaxChunkChars;
+}
+
+static IChunkExecutor LoadExecutor(string pluginPath, string? typeName)
+{
+    var assembly = Assembly.LoadFrom(Path.GetFullPath(pluginPath));
+    var candidates = assembly.GetTypes()
+        .Where(t => t is { IsAbstract: false, IsInterface: false } && typeof(IChunkExecutor).IsAssignableFrom(t))
+        .ToList();
+
+    if (!string.IsNullOrWhiteSpace(typeName))
+    {
+        candidates = candidates.Where(t => string.Equals(t.FullName, typeName, StringComparison.Ordinal)).ToList();
+    }
+
+    if (candidates.Count == 0)
+    {
+        throw new InvalidOperationException("程序集中没有实现 IChunkExecutor 的具体类型。");
+    }
+
+    if (candidates.Count > 1)
+    {
+        string names = string.Join("、", candidates.Select(t => t.FullName));
+        throw new InvalidOperationException($"程序集中有多个执行器，请用 --type 指定：{names}");
+    }
+
+    if (Activator.CreateInstance(candidates[0]) is not IChunkExecutor instance)
+    {
+        throw new InvalidOperationException($"类型 {candidates[0].FullName} 无法实例化，需要公共无参构造函数。");
+    }
+
+    return instance;
+}
+
+static void PrintUsage()
+{
+    Console.Error.WriteLine("""
+用法：
+  dotnet run --project samples/DemoConsoleApp -- --plugin <插件dll路径> [--type <全类型名>] [--size 600]
+
+说明：
+  本 Demo 不内置切分算法，必须加载实现了 IChunkExecutor 的外部插件。
+  演示插件桩（仓库外）：D:\ChineseChunkJudge.Plugins\StructureExecutorStub
+  构建后传入：D:\ChineseChunkJudge.Plugins\StructureExecutorStub\bin\Debug\net10.0\StructureExecutorStub.dll
+""");
 }

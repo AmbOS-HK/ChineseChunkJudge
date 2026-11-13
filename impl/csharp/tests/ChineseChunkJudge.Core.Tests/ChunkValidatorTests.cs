@@ -176,6 +176,18 @@ public sealed class ChunkValidatorTests
         Assert.Equal(7, report.AppliedRules.Count);
     }
 
+    [Fact]
+    public void CoreAssembly_ContainsNoChunkExecutorImplementation()
+    {
+        // 边界约束（口径 B）：本仓库不内置切片算法，Core 中不允许出现 IChunkExecutor 的具体实现。
+        var executors = typeof(DocumentFeature).Assembly.GetTypes()
+            .Where(t => t is { IsAbstract: false, IsInterface: false })
+            .Where(t => typeof(Abstractions.IChunkExecutor).IsAssignableFrom(t))
+            .ToList();
+
+        Assert.Empty(executors);
+    }
+
     private static DocumentFeature CreateDocument(string content, DocumentMetadata? metadata = null) => new()
     {
         DocumentId = "doc-test",

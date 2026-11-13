@@ -2,7 +2,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| 契约版本 | 0.1.0 |
+| 契约版本 | 0.1.1 |
 | 状态 | 生效 |
 | 权威文件 | 本文件 + `contract/openapi.yaml` + `contract/schema/*.json` |
 | 适用范围 | 任意语言、任意实现产出的文本切片结果 |
@@ -15,6 +15,12 @@
 ChineseChunkJudge 判定的是「切片结果是否符合契约」，不判定「哪种切片策略更好」。策略优劣由评测工具 **ChunkJudgeBench** 在同一契约下横向评测得出，本仓库只提供判定基线与参考实现。
 
 本契约与语言无关。`impl/csharp` 是第一个参考实现，不是标准的组成部分。
+
+### 1.1 不做什么（边界约束）
+
+- **不内置文档解析器**：PDF / Word / HTML 等版面解析外置，输入只有已解析的文本与元信息。
+- **不内置切片算法**：切分器是外部插件，本仓库任何项目（含 `samples/`）都不得交付生产切分算法。
+- **不判定策略优劣**：策略基线由 ChunkJudgeBench 产出并回填，本仓库只负责判定。
 
 ## 2. 术语
 
@@ -41,6 +47,15 @@ DocumentFeature + ChunkStrategyOptions
         │
         └─ 汇总 ──────────────────────────► JudgeReport
 ```
+
+### 3.1 执行器插件边界（强制）
+
+- `IChunkExecutor` 是**插件接入点**，不是本仓库提供的算法。执行器实现必须来自仓库外部，以插件形式注入。
+- 参考实现的职责仅限：归一化、切片质检、父子层级组装、`JudgeReport` 输出。
+- 策略类型 `{type}` 由插件的 `StrategyType` 提供；`targetSize` 由调用方通过选项指定。
+- `samples/DemoConsoleApp` 不内置任何切分算法，必须通过 `--plugin <插件dll路径>` 反射加载外部执行器；未提供插件或加载失败时以非零码退出，**不得输出伪造报告**。
+- 演示插件桩放在仓库外（当前为 `D:\ChineseChunkJudge.Plugins\StructureExecutorStub`），其存在不改变"本仓库不内置算法"的边界。
+- 插件引用 Core 时不得把 `ChineseChunkJudge.Core.dll` 复制进插件输出目录（C# 侧用 `Private="false"`），避免加载出双份 Core 导致接口类型不匹配。
 
 ## 4. 文档特征 DocumentFeature
 

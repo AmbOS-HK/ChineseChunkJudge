@@ -57,23 +57,37 @@ ChineseChunkJudge/
 
 | 组件 | 职责 |
 | --- | --- |
-| `IChunkExecutor` | 各语言/各策略的切片入口，只产出 `RawChunk` |
+| `IChunkExecutor` | **外部插件接入点**，只定义接口，本仓库不提供算法实现 |
 | `ChunkContract` 模型 | 契约数据结构，与 schema 一一对应 |
 | `ChunkRuleEngine` | 规则注册与执行；扩展只能新增，基础规则不可删除 |
 | `ChunkValidator` | 对契约切片执行规则，汇总问题清单 |
 | `ChunkRelationBuilder` | 构建 `previousChunkId` / `nextChunkId` / `parentChunkId` |
 | `ChunkJudgeService` | 归一化 + 校验 + 汇总，产出 `JudgeReport` |
 
+## 边界约束（不做什么）
+
+- **不内置文档解析**：PDF / Word / HTML 解析外置，输入只有文本与元信息。
+- **不内置切片算法**：切分器是外部插件，`samples/` 同样不含生产算法；Demo 通过 `--plugin` 反射加载外部执行器，未提供插件时以非零码退出，不输出报告。
+- 演示插件桩在仓库外：`D:\ChineseChunkJudge.Plugins\StructureExecutorStub`，不属于本仓库交付物。
+
 ## 快速开始
 
 ```powershell
+# 1) 构建仓库外插件桩（一次性）
+dotnet build D:\ChineseChunkJudge.Plugins\StructureExecutorStub
+
+# 2) 构建本仓库并跑测试
 cd D:\ChineseChunkJudge\impl\csharp
 dotnet build
 dotnet test
-dotnet run --project samples/DemoConsoleApp
+
+# 3) 用外部插件运行 Demo
+dotnet run --project samples/DemoConsoleApp -- `
+  --plugin "D:\ChineseChunkJudge.Plugins\StructureExecutorStub\bin\Debug\net10.0\StructureExecutorStub.dll" `
+  --size 600
 ```
 
-Demo 会输出一份 `structure@600` 的样例 JudgeReport JSON。
+Demo 会输出一份 `structure@600` 的样例 JudgeReport JSON；策略类型取自插件的 `StrategyType`，`--size` 缺省 600。
 
 ## 强制约束
 
@@ -82,6 +96,7 @@ Demo 会输出一份 `structure@600` 的样例 JudgeReport JSON。
 3. **策略命名**：`{type}@{targetSize}`，如 `structure@600`、`sentence@900`；基线由 ChunkJudgeBench 产出。
 4. **编码**：全仓库 UTF-8。
 5. **单一参考实现**：当前只做 C#，不新增其他语言的参考实现。
+6. **算法外置**：本仓库（含 samples）不交付切分算法与文档解析器，执行器由外部插件实现 `IChunkExecutor` 注入。
 
 ## 许可
 
