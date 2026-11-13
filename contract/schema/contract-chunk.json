@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chunkjudge.ambos.cn/schema/contract-chunk.json",
+  "title": "ContractChunk",
+  "description": "已补齐元信息、字符计数与关系指针的契约切片，是判定的直接对象。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "chunkId",
+    "index",
+    "text",
+    "startOffset",
+    "endOffset",
+    "strategy",
+    "metadata",
+    "charCount",
+    "relations"
+  ],
+  "properties": {
+    "chunkId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*@[1-9][0-9]*#[0-9]+$"
+    },
+    "index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "text": {
+      "type": "string"
+    },
+    "startOffset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "endOffset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "strategy": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*@[1-9][0-9]*$"
+    },
+    "metadata": {
+      "$ref": "./document-feature.json#/$defs/documentMetadata"
+    },
+    "charCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unicode 码位数量。"
+    },
+    "unitKind": {
+      "type": "string",
+      "enum": ["heading", "article", "paragraph", "sentence", "table", "code"]
+    },
+    "unitKey": {
+      "type": "string"
+    },
+    "structureLevel": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "startsAtUnitBoundary": {
+      "type": "boolean",
+      "default": true
+    },
+    "endsAtUnitBoundary": {
+      "type": "boolean",
+      "default": true
+    },
+    "relations": {
+      "$ref": "#/$defs/relations"
+    }
+  },
+  "$defs": {
+    "relations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["previousChunkId", "nextChunkId", "parentChunkId"],
+      "properties": {
+        "previousChunkId": {
+          "type": ["string", "null"]
+        },
+        "nextChunkId": {
+          "type": ["string", "null"]
+        },
+        "parentChunkId": {
+          "type": ["string", "null"],
+          "description": "最近的前序 heading 块；heading 块指向层级更浅的前序 heading 块。"
+        }
+      }
+    }
+  }
+}

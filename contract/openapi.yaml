@@ -1,0 +1,196 @@
+openapi: 3.1.0
+info:
+  title: ChineseChunkJudge Adjudication API
+  version: 0.1.0
+  description: >-
+    切片判定服务的 HTTP 契约。请求与响应结构引用 contract/schema 下的 JSON Schema，
+    与 contract/rules.md 同属权威标准。参考实现为进程内库，本契约用于跨语言一致性验证。
+  contact:
+    name: AmbOS-HK
+    url: https://github.com/AmbOS-HK
+license:
+  name: MIT
+  url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:5180/v1
+    description: 本地判定服务
+tags:
+  - name: contract
+    description: 契约元信息
+  - name: judge
+    description: 切片判定
+paths:
+  /rules:
+    get:
+      tags: [contract]
+      operationId: listRules
+      summary: 列出当前生效的判定规则
+      responses:
+        '200':
+          description: 规则清单
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleManifest'
+  /chunks/normalize:
+    post:
+      tags: [judge]
+      operationId: normalizeChunks
+      summary: 将原始切片归一化为契约切片（只归一化，不判定）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NormalizeRequest'
+      responses:
+        '200':
+          description: 契约切片数组，顺序与请求中 index 一致
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: './schema/contract-chunk.json'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /judge:
+    post:
+      tags: [judge]
+      operationId: judgeChunks
+      summary: 对调用方提交的原始切片执行判定
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JudgeRequest'
+      responses:
+        '200':
+          description: 判定报告
+          content:
+            application/json:
+              schema:
+                $ref: './schema/judge-report.json'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /judge/execute:
+    post:
+      tags: [judge]
+      operationId: judgeWithExecutor
+      summary: 由服务端已注册的执行器完成切片并判定
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteRequest'
+      responses:
+        '200':
+          description: 判定报告
+          content:
+            application/json:
+              schema:
+                $ref: './schema/judge-report.json'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: 执行器未注册
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  responses:
+    BadRequest:
+      description: 请求不符合契约（含 CCJ-007 选项非法）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    NormalizeRequest:
+      type: object
+      additionalProperties: false
+      required: [document, options, rawChunks]
+      properties:
+        document:
+          $ref: './schema/document-feature.json'
+        options:
+          $ref: './schema/chunk-strategy-options.json'
+        rawChunks:
+          type: array
+          items:
+            $ref: './schema/raw-chunk.json'
+    JudgeRequest:
+      type: object
+      additionalProperties: false
+      required: [document, options, rawChunks]
+      properties:
+        document:
+          $ref: './schema/document-feature.json'
+        options:
+          $ref: './schema/chunk-strategy-options.json'
+        rawChunks:
+          type: array
+          items:
+            $ref: './schema/raw-chunk.json'
+    ExecuteRequest:
+      type: object
+      additionalProperties: false
+      required: [document, options, executor]
+      properties:
+        document:
+          $ref: './schema/document-feature.json'
+        options:
+          $ref: './schema/chunk-strategy-options.json'
+        executor:
+          type: string
+          minLength: 1
+          description: 已注册执行器的标识，取值为策略类型，例如 structure
+          examples: [structure]
+    RuleManifest:
+      type: object
+      additionalProperties: false
+      required: [contractVersion, rules]
+      properties:
+        contractVersion:
+          type: string
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleDescriptor'
+    RuleDescriptor:
+      type: object
+      additionalProperties: false
+      required: [ruleId, description, severity, isBaseRule]
+      properties:
+        ruleId:
+          type: string
+          pattern: '^CCJ-(?:[0-9]{3}|X[0-9]{3})$'
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, error]
+        isBaseRule:
+          type: boolean
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              examples: [invalid_options]
+            message:
+              type: string
+            detail:
+              type: object
+              additionalProperties:
+                type: string

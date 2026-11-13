@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chunkjudge.ambos.cn/schema/raw-chunk.json",
+  "title": "RawChunk",
+  "description": "切片器直接产出的片段，尚未补齐契约元信息。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["index", "text", "startOffset", "endOffset"],
+  "properties": {
+    "index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "从 0 起，连续递增。"
+    },
+    "text": {
+      "type": "string",
+      "description": "必须与原文 [startOffset, endOffset) 区间逐字一致。"
+    },
+    "startOffset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "endOffset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "unitKind": {
+      "type": "string",
+      "enum": ["heading", "article", "paragraph", "sentence", "table", "code"]
+    },
+    "unitKey": {
+      "type": "string"
+    },
+    "structureLevel": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "startsAtUnitBoundary": {
+      "type": "boolean",
+      "default": true
+    },
+    "endsAtUnitBoundary": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

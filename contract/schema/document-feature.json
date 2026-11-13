@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chunkjudge.ambos.cn/schema/document-feature.json",
+  "title": "DocumentFeature",
+  "description": "一次判定请求的输入文档：正文、元信息与可选结构提示。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["documentId", "metadata", "content"],
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metadata": {
+      "$ref": "#/$defs/documentMetadata"
+    },
+    "content": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string",
+      "default": "zh"
+    },
+    "structureHints": {
+      "$ref": "#/$defs/structureHints"
+    }
+  },
+  "$defs": {
+    "documentMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "固定五字段，不可删减、不可改名、不可改类型。",
+      "required": ["title", "sourcePath", "documentType", "pageInfo", "createTime"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourcePath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "documentType": {
+          "type": "string",
+          "enum": ["text", "markdown", "html", "pdf", "docx", "other"]
+        },
+        "pageInfo": {
+          "type": "string",
+          "minLength": 1
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "structureHints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "headingCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unitBoundaries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/unitBoundary"
+          }
+        }
+      }
+    },
+    "unitBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "startOffset", "endOffset"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["heading", "article", "paragraph", "sentence", "table", "code"]
+        },
+        "startOffset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "endOffset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

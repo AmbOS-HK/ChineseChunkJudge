@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chunkjudge.ambos.cn/schema/judge-report.json",
+  "title": "JudgeReport",
+  "description": "一次判定的完整结果：摘要、问题清单与生效规则。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reportId",
+    "documentId",
+    "strategy",
+    "targetSize",
+    "generatedAt",
+    "passed",
+    "summary",
+    "issues",
+    "appliedRules"
+  ],
+  "properties": {
+    "reportId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "documentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*@[1-9][0-9]*$"
+    },
+    "targetSize": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1500
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "passed": {
+      "type": "boolean",
+      "description": "问题清单中不存在 error 级问题。"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
+    },
+    "appliedRules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/appliedRule"
+      }
+    }
+  },
+  "$defs": {
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chunkCount",
+        "totalCharCount",
+        "minCharCount",
+        "maxCharCount",
+        "averageCharCount",
+        "emptyChunkCount",
+        "oversizedChunkCount"
+      ],
+      "properties": {
+        "chunkCount": { "type": "integer", "minimum": 0 },
+        "totalCharCount": { "type": "integer", "minimum": 0 },
+        "minCharCount": { "type": "integer", "minimum": 0 },
+        "maxCharCount": { "type": "integer", "minimum": 0 },
+        "averageCharCount": { "type": "integer", "minimum": 0 },
+        "emptyChunkCount": { "type": "integer", "minimum": 0 },
+        "oversizedChunkCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ruleId", "severity", "message"],
+      "properties": {
+        "ruleId": {
+          "type": "string",
+          "pattern": "^CCJ-(?:[0-9]{3}|X[0-9]{3})$"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "error"]
+        },
+        "chunkId": {
+          "type": ["string", "null"],
+          "description": "文档级问题为 null。"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detail": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "appliedRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ruleId", "description", "severity", "isBaseRule"],
+      "properties": {
+        "ruleId": {
+          "type": "string",
+          "pattern": "^CCJ-(?:[0-9]{3}|X[0-9]{3})$"
+        },
+        "description": { "type": "string", "minLength": 1 },
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "error"]
+        },
+        "isBaseRule": { "type": "boolean" }
+      }
+    }
+  }
+}

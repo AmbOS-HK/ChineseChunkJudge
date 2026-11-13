@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chunkjudge.ambos.cn/schema/chunk-strategy-options.json",
+  "title": "ChunkStrategyOptions",
+  "description": "切片策略选项。策略名由 strategyType 与 targetSize 拼成 {type}@{targetSize}。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["strategyType", "targetSize"],
+  "properties": {
+    "strategyType": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "targetSize": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1500
+    },
+    "maxChunkSize": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1500,
+      "default": 1500,
+      "description": "单块硬上限，不得大于契约常量 MAX_CHUNK_CHARS=1500。"
+    },
+    "minChunkSize": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1
+    },
+    "preserveStructure": {
+      "type": "boolean",
+      "default": true
+    },
+    "overlap": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "相邻块重叠字符数，须小于 targetSize。"
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}
