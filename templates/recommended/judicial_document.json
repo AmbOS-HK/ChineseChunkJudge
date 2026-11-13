@@ -1,0 +1,30 @@
+{
+  "templateId": "judicial-document-starter",
+  "version": "0.1.0",
+  "name": "司法文书建议模板（未评测）",
+  "appliesTo": {
+    "documentCategories": ["judicial_document"]
+  },
+  "decision": {
+    "rules": [
+      {
+        "traits": ["dense_table"],
+        "chunkMode": "smart",
+        "chunkSize": 1500
+      },
+      {
+        "traits": ["weak_structure"],
+        "chunkMode": "smart",
+        "chunkSize": 1200
+      }
+    ],
+    "fallback": {
+      "chunkMode": "smart",
+      "chunkSize": 1200
+    }
+  },
+  "validation": {
+    "hardCutZero": true,
+    "acceptanceRef": "aec-27q"
+  }
+}

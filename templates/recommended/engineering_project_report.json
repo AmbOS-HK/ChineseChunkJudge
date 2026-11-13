@@ -1,0 +1,39 @@
+{
+  "templateId": "engineering-project-report-starter",
+  "version": "0.1.0",
+  "name": "工程/项目报告建议模板（未评测）",
+  "appliesTo": {
+    "documentCategories": ["engineering_project_report"]
+  },
+  "decision": {
+    "rules": [
+      {
+        "traits": ["dense_table"],
+        "chunkMode": "smart",
+        "chunkSize": 1500
+      },
+      {
+        "traits": ["section_numbering"],
+        "chunkMode": "regex",
+        "pattern": "(?=（[一二三四五六七八九十]+）)",
+        "chunkSize": 1200,
+        "forbidLineStartAnchor": true,
+        "forbidHeadingSplit": true,
+        "preserveSeparator": true
+      },
+      {
+        "traits": ["weak_structure"],
+        "chunkMode": "smart",
+        "chunkSize": 1200
+      }
+    ],
+    "fallback": {
+      "chunkMode": "smart",
+      "chunkSize": 1200
+    }
+  },
+  "validation": {
+    "hardCutZero": true,
+    "acceptanceRef": "aec-27q"
+  }
+}

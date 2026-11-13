@@ -1,0 +1,39 @@
+{
+  "templateId": "manual-starter",
+  "version": "0.1.0",
+  "name": "操作手册建议模板（未评测）",
+  "appliesTo": {
+    "documentCategories": ["manual"]
+  },
+  "decision": {
+    "rules": [
+      {
+        "traits": ["section_numbering"],
+        "chunkMode": "regex",
+        "pattern": "(?=（[一二三四五六七八九十]+）)",
+        "chunkSize": 1000,
+        "forbidLineStartAnchor": true,
+        "forbidHeadingSplit": true,
+        "preserveSeparator": true
+      },
+      {
+        "traits": ["dense_table"],
+        "chunkMode": "smart",
+        "chunkSize": 1200
+      },
+      {
+        "traits": ["weak_structure"],
+        "chunkMode": "smart",
+        "chunkSize": 1000
+      }
+    ],
+    "fallback": {
+      "chunkMode": "smart",
+      "chunkSize": 1000
+    }
+  },
+  "validation": {
+    "hardCutZero": true,
+    "acceptanceRef": "aec-27q"
+  }
+}

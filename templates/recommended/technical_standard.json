@@ -1,0 +1,43 @@
+{
+  "templateId": "technical-standard-starter",
+  "version": "0.1.0",
+  "name": "技术标准建议模板（未评测）",
+  "appliesTo": {
+    "documentCategories": ["technical_standard"]
+  },
+  "decision": {
+    "rules": [
+      {
+        "traits": ["article_numbering"],
+        "chunkMode": "regex",
+        "pattern": "(?=第[一二三四五六七八九十百零〇0-9]+[条章])",
+        "chunkSize": 1200,
+        "forbidLineStartAnchor": true,
+        "forbidHeadingSplit": true,
+        "preserveSeparator": true
+      },
+      {
+        "traits": ["section_numbering"],
+        "chunkMode": "regex",
+        "pattern": "(?=（[一二三四五六七八九十]+）)",
+        "chunkSize": 1200,
+        "forbidLineStartAnchor": true,
+        "forbidHeadingSplit": true,
+        "preserveSeparator": true
+      },
+      {
+        "traits": ["weak_structure"],
+        "chunkMode": "smart",
+        "chunkSize": 1200
+      }
+    ],
+    "fallback": {
+      "chunkMode": "smart",
+      "chunkSize": 1200
+    }
+  },
+  "validation": {
+    "hardCutZero": true,
+    "acceptanceRef": "aec-27q"
+  }
+}
