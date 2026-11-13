@@ -173,7 +173,7 @@ public sealed class ChunkValidatorTests
         Assert.Equal("structure@600", report.Strategy);
         Assert.Equal(2, report.Summary.ChunkCount);
         Assert.Equal(12, report.Summary.TotalCharCount);
-        Assert.Equal(14, report.AppliedRules.Count);
+        Assert.Equal(15, report.AppliedRules.Count);
     }
 
     [Fact]

@@ -2,7 +2,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| 契约版本 | 0.2.0 |
+| 契约版本 | 0.3.0 |
 | 状态 | 生效 |
 | 权威文件 | 本文件 + `contract/openapi.yaml` + `contract/schema/*.json` |
 | 适用范围 | 任意语言、任意实现产出的文本切片结果 |
@@ -36,6 +36,8 @@ ChineseChunkJudge 判定的是「切片结果是否符合契约」，不判定�
 | 上下文父块 contextParent | 双库模式下与子块配对、供下游拼接上下文的粗粒度块；取自原文区间，互不重叠 |
 | 父子配对 ContextParentChildPair | `contextParentChunkId` + `childChunkIds[]`，1:N 为主、1:1 合法 |
 | 父子产物包 ParentChildPackage | 独立输出产物：全部上下文父块 + 父子关联映射，与 `JudgeReport` 解耦 |
+| 切片规则模板 ChunkRuleTemplate | 选型判定（Spec 侧）契约：文档特征 → 切分方式 + 参数 + 验证口径 + 有序决策表，见第 13 节 |
+| 恰长硬切 | 切片长度恰好等于 `chunkSize` 且结尾不在允许句读集合（页码容错），由 CCJ-015 判定 |
 | 字符数 charCount | 文本的 Unicode 码位（code point）总数 |
 
 ## 3. 数据流转
@@ -132,6 +134,7 @@ strategy = {type}@{targetSize}
 | 重叠字符数 | `overlap` | integer | 否 | 0 | 0..targetSize-1 |
 | 扩展参数 | `extensions` | object | 否 | — | string→string，实现自行解释，不得改变本契约字段语义 |
 | 双库开关与父块阈值 | `parentChild` | object | 否 | 见下 | 双库（Parent/Child）配置，见 5.3 |
+| 切分方式 | `chunkMode` | string | 否 | — | 枚举 `regex` / `smart` / `page`，由模板决策回填；`page` 模式豁免 CCJ-015 |
 
 ### 5.3 parentChild（双库配置）
 
@@ -257,7 +260,7 @@ strategy = {type}@{targetSize}
 | `MAX_CHUNK_CHARS` | 1500 | 子块字符数**告警阈值**，任何选项不得放宽；CCJ-004 作用域仅 Child Chunk |
 | `PARENT_MAX_CHARS_DEBUG` | 6000 | 父块长度告警阈值的**临时调试默认值**，非标准基准；正式值由样本 P95 标定，契约不设全局硬封顶 |
 
-### 8.3 基础规则表（CCJ-001..CCJ-014）
+### 8.3 基础规则表（CCJ-001..CCJ-015）
 
 | 编号 | 级别 | 触发条件 | 输出要点 |
 | --- | --- | --- | --- |
@@ -275,14 +278,24 @@ strategy = {type}@{targetSize}
 | CCJ-012 | error | 子块区间未落在其归属 contextParent 区间内 | 报告子块与父块区间 |
 | CCJ-013 | error | `parentChild.enabled=false` 时输出存在 `parentChunks` 或 `contextParentChunkId` | 报告检出字段，判定不通过 |
 | CCJ-014 | warning | `parentChunkId`（deprecated）与 `structuralParentChunkId` 同时出现但值不一致 | 报告两个值 |
+| CCJ-015 | error | 恰长硬切：`charCount` 恰好等于 `chunkSize` 且结尾不在允许句读集合（页码容错）；`page` 模式豁免，父块不适用 | 报告子块标识、长度与结尾片段 |
 
 ### 8.4 基础规则的不可变性
 
-- CCJ-001..CCJ-014 全部为**基础规则**：不可删除、不可改编号、不可降级级别、不可改变判定条件。
+- CCJ-001..CCJ-015 全部为**基础规则**：不可删除、不可改编号、不可降级级别、不可改变判定条件。
 - 实现可以提供「扩展规则」新增校验，但**不得删除基础校验**，也不得用扩展规则豁免基础规则判出的问题。
 - 基础规则可以按需关闭输出级别（如将 warning 降为 info）仅限实现内部展示层，不得改变 `JudgeReport` 中的契约语义。
 - **长度校验作用域**：CCJ-004 作用域为 **Child Chunk**（阈值 1500，不可豁免）；上下文父块由 **CCJ-009** 独立约束（阈值 `parentMaxChars`，仅告警）。这是**规则作用域拆分**，不是对 CCJ-004 的豁免。
 - 双库模式下的推论：父块互不重叠 + 全文划分 + 子块区间 ⊆ 父块区间，可推出子块区间互不重叠，CCJ-006 此时应恒不触发；触发即说明上游未遵守「先父后子」数据流。
+
+### 8.5 CCJ-015 恰长硬切判定细则
+
+- **判定对象**：`ContractChunk`（子块）。`chunkMode=page` 豁免；上下文父块不适用。
+- **判定条件（同时满足）**：`charCount` 恰好等于当前生效 `chunkSize`（`options.targetSize`）；切片结尾不属于允许结束集合。
+- **允许结束集合**：中文句读 `。！？；…` 及英文 `.!?;`，含闭合形式（结尾为 `” ’ ） 】 》` 且前一位为句读）。
+- **页码容错**：结尾匹配「句读 + 可选空白 + 1..4 位纯数字」视为页码，不计硬切。
+- **超限不判**：`charCount > chunkSize` 由 CCJ-004 处理；小于不判。
+- **级别**：error，`passed=false`；计数入 `summary.hardCutChunkCount`。
 
 ## 9. 判定报告 JudgeReport
 
@@ -314,6 +327,7 @@ strategy = {type}@{targetSize}
 | `parentCoverageRatio` | number | `childWithParentCount` / 子块总数；无子块时为 0 |
 | `parentCharP95` | integer | 上下文父块字符长度 P95（四舍五入取整），无父块时为 0 |
 | `oversizedParentChunkCount` | integer | 超过 `parentMaxChars` 的父块数量，与 `oversizedChunkCount` 独立累加 |
+| `hardCutChunkCount` | integer | 恰长硬切子块数量（CCJ-015），验收口径为每文档必须为 0 |
 
 ### 9.2 issue
 
@@ -357,3 +371,29 @@ strategy = {type}@{targetSize}
    - 新增必填字段、新增基础规则、收紧判定条件：次版本（`0.x.0`）；
    - 删除字段、放宽核心约束、改变字段语义：主版本（`x.0.0`）。
 4. 禁止实现侧单方面修改核心字段；发现契约与实际不符时，先改契约再改实现。
+
+## 13. 切片规则模板 ChunkRuleTemplate（0.3.0，Spec 侧）
+
+模板承载**选型判定**：文档特征 → 切分方式 + 参数 + 验证口径。模板只描述决策，不执行切分（执行仍归外部执行器，§1.1）；库名等部署标识不进模板，由部署侧映射到 `templateId`。
+
+### 13.1 模板字段
+
+| 字段 | 类型 | 必填 | 约定 |
+| --- | --- | --- | --- |
+| `templateId` | string | 是 | `^[a-z][a-z0-9_-]*$` |
+| `version` | string | 是 | 模板自身版本，与契约版本独立 |
+| `name` | string | 是 | 展示名 |
+| `appliesTo` | object | 是 | `documentCategories: string[]` + `traits: enum[]` |
+| `decision` | object | 是 | 见 13.2 |
+| `validation` | object | 否 | `hardCutZero: boolean = true`；`acceptanceRef: string` 可选（回归执行归 Bench） |
+
+`traits` 封闭枚举：`article_numbering`（第X条/章）、`section_numbering`（（一）（二）分节）、`weak_structure`、`dense_table`、`pdf_no_structure`。扩枚举走次版本。
+
+### 13.2 决策表
+
+- `decision.rules`：有序数组，**先匹配先生效**；每条 = `{ traits, chunkMode, pattern?, chunkSize, parentChild? }`，`traits` 全部满足才命中。
+- `decision.fallback`：**必填兜底**，`chunkMode=smart` 且 `chunkSize` 必填；未命中任何规则时必须落 fallback，不允许无决策结果。
+- `chunkMode` ∈ `regex` / `smart` / `page`；`regex` 时 `pattern` 必填，其余模式禁止携带 `pattern`。
+- 正则禁忌用枚举字段：`forbidLineStartAnchor: boolean = true`（禁 `^` 多行锚）、`forbidHeadingSplit: boolean = true`（禁 h3 标题切分）、`preserveSeparator: boolean = true`（保留分隔符）。
+- `chunkSize`：integer，1..1500；`smart` 为软上限。
+- `parentChild` 引用 §5.3 配置，不复制字段。

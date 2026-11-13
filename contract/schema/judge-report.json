@@ -74,7 +74,8 @@
         "childWithParentCount",
         "parentCoverageRatio",
         "parentCharP95",
-        "oversizedParentChunkCount"
+        "oversizedParentChunkCount",
+        "hardCutChunkCount"
       ],
       "properties": {
         "chunkCount": { "type": "integer", "minimum": 0 },
@@ -96,6 +97,11 @@
           "type": "integer",
           "minimum": 0,
           "description": "超过 parentMaxChars 的父块数量，与 oversizedChunkCount 独立累加。"
+        },
+        "hardCutChunkCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "恰长硬切子块数量（CCJ-015），验收口径为每文档必须为 0。"
         }
       }
     },

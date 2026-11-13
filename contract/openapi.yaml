@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ChineseChunkJudge Adjudication API
-  version: 0.2.0
+  version: 0.3.0
   description: >-
     切片判定服务的 HTTP 契约。请求与响应结构引用 contract/schema 下的 JSON Schema，
     与 contract/rules.md 同属权威标准。参考实现为进程内库，本契约用于跨语言一致性验证。
@@ -72,6 +72,26 @@ paths:
             application/json:
               schema:
                 $ref: './schema/judge-report.json'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /templates/resolve:
+    post:
+      tags: [judge]
+      operationId: resolveChunkTemplate
+      summary: 选型判定：按规则模板决策切分方式与参数，不执行切分
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateResolveRequest'
+      responses:
+        '200':
+          description: 模板决策结果（命中规则或强制兜底）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateDecision'
         '400':
           $ref: '#/components/responses/BadRequest'
   /packages/parent-child:
@@ -172,6 +192,42 @@ components:
           type: array
           items:
             $ref: './schema/parent-child-package.json#/$defs/contextParentChildPair'
+    TemplateResolveRequest:
+      type: object
+      additionalProperties: false
+      required: [template, documentCategories, traits]
+      properties:
+        template:
+          $ref: './schema/chunk-rule-template.json'
+        documentCategories:
+          type: array
+          items:
+            type: string
+        traits:
+          type: array
+          items:
+            $ref: './schema/chunk-rule-template.json#/$defs/trait'
+    TemplateDecision:
+      type: object
+      additionalProperties: false
+      required: [templateId, chunkMode, chunkSize, usedFallback]
+      properties:
+        templateId:
+          type: string
+        matchedRuleIndex:
+          type: integer
+          minimum: 0
+          description: 命中的规则下标；usedFallback=true 时缺省。
+        usedFallback:
+          type: boolean
+        chunkMode:
+          $ref: './schema/chunk-rule-template.json#/$defs/chunkMode'
+        pattern:
+          type: string
+        chunkSize:
+          type: integer
+        parentChild:
+          $ref: './schema/chunk-strategy-options.json#/properties/parentChild'
     PackageRequest:
       type: object
       additionalProperties: false

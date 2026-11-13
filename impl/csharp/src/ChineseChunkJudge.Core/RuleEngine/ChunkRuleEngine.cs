@@ -21,6 +21,7 @@ public static class ChunkRuleIds
     public const string ChildWithinParent = "CCJ-012";
     public const string ParentChildDisabled = "CCJ-013";
     public const string ParentAliasConsistency = "CCJ-014";
+    public const string HardCut = "CCJ-015";
 }
 
 /// <summary>规则求值上下文。</summary>
@@ -428,12 +429,13 @@ public sealed class ChunkRuleEngine
         ChunkRuleIds.ParentReferenceCycle,
         ChunkRuleIds.ChildWithinParent,
         ChunkRuleIds.ParentChildDisabled,
-        ChunkRuleIds.ParentAliasConsistency
+        ChunkRuleIds.ParentAliasConsistency,
+        ChunkRuleIds.HardCut
     };
 
     public IReadOnlyList<IChunkRule> Rules => _rules;
 
-    /// <summary>构造契约规定的十四条基础规则。</summary>
+    /// <summary>构造契约规定的十五条基础规则。</summary>
     public static IReadOnlyList<IChunkRule> CreateDefaultRules() =>
     [
         new MetadataCompletenessRule(),
@@ -449,7 +451,8 @@ public sealed class ChunkRuleEngine
         new ParentReferenceCycleRule(),
         new ChildWithinParentRule(),
         new ParentChildDisabledRule(),
-        new ParentAliasConsistencyRule()
+        new ParentAliasConsistencyRule(),
+        new HardCutRule()
     ];
 
     /// <summary>注册扩展规则。编号必须唯一，扩展规则不得声明为基础规则。</summary>

@@ -218,7 +218,10 @@ public sealed class ChunkJudgeService
             ChildWithParentCount = childWithParent,
             ParentCoverageRatio = chunks.Count == 0 ? 0d : (double)childWithParent / chunks.Count,
             ParentCharP95 = Percentile95(parentSizes),
-            OversizedParentChunkCount = parentSizes.Count(s => s > threshold)
+            OversizedParentChunkCount = parentSizes.Count(s => s > threshold),
+            HardCutChunkCount = string.Equals(options.ChunkMode, ChunkModes.Page, StringComparison.Ordinal)
+                ? 0
+                : chunks.Count(c => HardCutRule.IsHardCut(c.Text, options.TargetSize))
         };
     }
 

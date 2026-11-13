@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chunkjudge.ambos.cn/schema/chunk-rule-template.json",
+  "title": "ChunkRuleTemplate",
+  "description": "切片规则模板（Spec 侧）：文档特征 → 切分方式 + 参数 + 验证口径。只描述决策，不执行切分。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["templateId", "version", "name", "appliesTo", "decision"],
+  "properties": {
+    "templateId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "模板自身版本，与契约版本独立。"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "appliesTo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["documentCategories"],
+      "properties": {
+        "documentCategories": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "traits": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/trait" }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rules", "fallback"],
+      "properties": {
+        "rules": {
+          "type": "array",
+          "description": "有序，先匹配先生效；traits 全部满足才命中。",
+          "items": { "$ref": "#/$defs/decisionRule" }
+        },
+        "fallback": {
+          "$ref": "#/$defs/fallback"
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hardCutZero": {
+          "type": "boolean",
+          "default": true
+        },
+        "acceptanceRef": {
+          "type": "string",
+          "description": "回归验收标识，执行归 ChunkJudgeBench。"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "trait": {
+      "type": "string",
+      "enum": ["article_numbering", "section_numbering", "weak_structure", "dense_table", "pdf_no_structure"]
+    },
+    "chunkMode": {
+      "type": "string",
+      "enum": ["regex", "smart", "page"]
+    },
+    "decisionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["traits", "chunkMode", "chunkSize"],
+      "properties": {
+        "traits": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/trait" }
+        },
+        "chunkMode": { "$ref": "#/$defs/chunkMode" },
+        "pattern": {
+          "type": "string",
+          "description": "chunkMode=regex 时必填，其余模式禁止携带。"
+        },
+        "chunkSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1500
+        },
+        "parentChild": {
+          "$ref": "./chunk-strategy-options.json#/properties/parentChild"
+        },
+        "forbidLineStartAnchor": {
+          "type": "boolean",
+          "default": true,
+          "description": "禁 ^ 多行锚。"
+        },
+        "forbidHeadingSplit": {
+          "type": "boolean",
+          "default": true,
+          "description": "禁 h3 标题切分。"
+        },
+        "preserveSeparator": {
+          "type": "boolean",
+          "default": true,
+          "description": "保留分隔符，不丢标点。"
+        }
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chunkMode", "chunkSize"],
+      "description": "强制兜底：未命中任何规则时使用，不允许无决策结果。",
+      "properties": {
+        "chunkMode": {
+          "type": "string",
+          "const": "smart"
+        },
+        "chunkSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1500
+        },
+        "parentChild": {
+          "$ref": "./chunk-strategy-options.json#/properties/parentChild"
+        }
+      }
+    }
+  }
+}

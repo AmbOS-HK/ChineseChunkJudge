@@ -31,7 +31,8 @@ ChineseChunkJudge/
 │     ├─ raw-chunk.json               # 原始切片
 │     ├─ contract-chunk.json          # 契约切片
 │     ├─ judge-report.json            # 判定报告
-│     └─ parent-child-package.json    # 双库产物包（0.2.0 新增）
+│     ├─ parent-child-package.json    # 双库产物包（0.2.0 新增）
+│     └─ chunk-rule-template.json     # 切片规则模板（0.3.0 新增）
 └─ impl/
    ├─ csharp/                         # 首个参考实现（net10.0），已实现
    │  ├─ ChineseChunkJudge.sln
@@ -39,15 +40,19 @@ ChineseChunkJudge/
    │  │  ├─ Abstractions/IChunkExecutor.cs
    │  │  ├─ Models/ChunkContract.cs
    │  │  ├─ Models/ParentChildContract.cs
+   │  │  ├─ Models/RuleTemplateContract.cs
    │  │  ├─ RuleEngine/ChunkRuleEngine.cs
    │  │  ├─ RuleEngine/ParentChildRules.cs
+   │  │  ├─ RuleEngine/HardCutRule.cs
    │  │  ├─ Validators/ChunkValidator.cs
    │  │  ├─ Builders/ChunkRelationBuilder.cs
+   │  │  ├─ Builders/TemplateResolver.cs
    │  │  ├─ ChunkJudgeService.cs
    │  │  └─ ChineseChunkJudge.Core.csproj
    │  ├─ tests/ChineseChunkJudge.Core.Tests/
    │  │  ├─ ChunkValidatorTests.cs
    │  │  ├─ ParentChildRulesTests.cs
+   │  │  ├─ RuleTemplateAndHardCutTests.cs
    │  │  └─ ChineseChunkJudge.Core.Tests.csproj
    │  └─ samples/DemoConsoleApp/
    │     ├─ Program.cs
@@ -68,11 +73,11 @@ ChineseChunkJudge/
 | --- | --- |
 | `contract/rules.md` | 术语、元信息、策略命名、规则编号与级别、报告结构、变更流程 |
 | `contract/openapi.yaml` | 判定服务 HTTP 接口（`/rules`、`/chunks/normalize`、`/judge`、`/judge/execute`） |
-| `contract/schema/*.json` | 六类数据结构的 JSON Schema（2020-12），含双库产物包 |
+| `contract/schema/*.json` | 七类数据结构的 JSON Schema（2020-12），含双库产物包与规则模板 |
 
 修改顺序固定：**先改 `contract/`，再同步 `impl/`**。参考实现不得私自增删契约核心字段，也不得删除或降级基础校验规则。
 
-当前契约版本 **0.2.0**：基础规则 CCJ-001..CCJ-014；新增双库（Parent/Child）可选产物 `ParentChildPackage`（默认关闭）、`structuralParentChunkId` / `contextParentChunkId` 两个独立父指针，旧字段 `parentChunkId` 标记弃用并保留至 1.0.0。C# 参考实现已同步，`dotnet build` 0 警告 0 错误、24 项单元测试全部通过（2026-11-13）。
+当前契约版本 **0.3.0**：基础规则 CCJ-001..CCJ-015；0.2.0 落地双库产物 `ParentChildPackage`（默认关闭）与双父指针（`parentChunkId` 弃用保留至 1.0.0）；0.3.0 落地 Spec 侧 `ChunkRuleTemplate`（`/templates/resolve` 选型判定，强制 smart 兜底）与 CCJ-015 恰长硬切（error）。C# 参考实现已同步，`dotnet build` 0 警告 0 错误、36 项单元测试全部通过（2026-11-13）。
 
 ## 参考实现
 

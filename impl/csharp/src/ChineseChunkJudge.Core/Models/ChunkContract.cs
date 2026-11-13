@@ -15,7 +15,7 @@ public static class ContractConstants
     public const string StrategyNamePattern = @"^[a-z][a-z0-9_-]*@[1-9][0-9]*$";
 
     /// <summary>契约版本号，与 contract/rules.md 表头一致。</summary>
-    public const string ContractVersion = "0.2.0";
+    public const string ContractVersion = "0.3.0";
 
     /// <summary>父块长度告警阈值的临时调试默认值，非标准基准；正式值由样本 P95 标定。</summary>
     public const int ParentMaxCharsDebugDefault = 6000;
@@ -123,6 +123,9 @@ public sealed record ChunkStrategyOptions
 
     /// <summary>双库配置，缺省为关闭。</summary>
     public ParentChildOptions? ParentChild { get; init; }
+
+    /// <summary>切分方式（regex / smart / page），由模板决策回填；page 模式豁免 CCJ-015。</summary>
+    public string? ChunkMode { get; init; }
 
     /// <summary>契约策略名：{type}@{targetSize}。</summary>
     public string StrategyName => $"{StrategyType}@{TargetSize}";
@@ -249,6 +252,9 @@ public sealed record ChunkReportSummary
 
     /// <summary>超过 parentMaxChars 的父块数量，与 OversizedChunkCount 独立累加。</summary>
     public int OversizedParentChunkCount { get; init; }
+
+    /// <summary>恰长硬切子块数量（CCJ-015），验收口径为每文档必须为 0。</summary>
+    public int HardCutChunkCount { get; init; }
 }
 
 /// <summary>报告中的生效规则描述。</summary>
