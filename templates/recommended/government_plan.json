@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "name": "政府规划建议模板（未评测）",
   "appliesTo": {
-    "documentCategories": ["development_plan"]
+    "documentCategories": ["government_plan"]
   },
   "decision": {
     "rules": [
