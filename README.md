@@ -16,12 +16,33 @@ ChineseChunkJudge/
 ├─ README.md
 ├─ LICENSE
 ├─ .gitignore
-├─ docs/                              # 规划文档，非标准
+├─ .gitattributes                     # 文本入库统一 LF
+├─ .editorconfig                      # UTF-8 / 缩进 / 换行
+├─ CONTRIBUTING.md                    # 契约先行流程与提交规范
+├─ CODE_OF_CONDUCT.md
+├─ SECURITY.md                        # 安全问题报告渠道
+├─ .github/
+│  ├─ workflows/
+│  │  └─ ci.yml                       # push / PR 到 main：build + test
+│  ├─ ISSUE_TEMPLATE/
+│  │  ├─ bug_report.yml
+│  │  ├─ feature_request.yml
+│  │  └─ config.yml
+│  └─ PULL_REQUEST_TEMPLATE.md
+├─ docs/                              # 规划与审查文档，非标准
 │  ├─ 00-定位与边界.md
 │  ├─ 01-术语表.md
 │  ├─ 02-契约演进.md
 │  ├─ 03-实现矩阵.md
-│  └─ 04-对外文案口径.md
+│  ├─ 04-对外文案口径.md
+│  ├─ 05-C01-C02-文档类别与特征产出方草案.md
+│  ├─ 06-C17-标题路径扩展-立项.md
+│  ├─ 07-C18-选型入口接收模板集-立项.md
+│  ├─ 08-模板生产线与自动适配-规划.md
+│  ├─ 09-全量完整性自查-2026-11-14.md
+│  ├─ 10-类别清单规范性审核-2026-11-14.md
+│  ├─ 11-14类模板族规范性与科学性验证-2026-11-14.md
+│  └─ 12-类别到默认模板与Bench分组映射-2026-11-14.md
 ├─ contract/                          # 权威标准，先改这里
 │  ├─ rules.md                        # 判定规则正文
 │  ├─ openapi.yaml                    # 判定服务 HTTP 契约（OpenAPI 3.1）
@@ -33,6 +54,15 @@ ChineseChunkJudge/
 │     ├─ judge-report.json            # 判定报告
 │     ├─ parent-child-package.json    # 双库产物包（0.2.0 新增）
 │     └─ chunk-rule-template.json     # 切片规则模板（0.3.0 新增）
+├─ templates/
+│  └─ recommended/                    # 推荐模板族（6 类 + 说明）
+│     ├─ README.md
+│     ├─ engineering_project_report.json
+│     ├─ government_plan.json
+│     ├─ judicial_document.json
+│     ├─ law_regulation.json
+│     ├─ manual.json
+│     └─ technical_standard.json
 └─ impl/
    ├─ csharp/                         # 首个参考实现（net10.0），已实现
    │  ├─ ChineseChunkJudge.sln
@@ -53,6 +83,7 @@ ChineseChunkJudge/
    │  │  ├─ ChunkValidatorTests.cs
    │  │  ├─ ParentChildRulesTests.cs
    │  │  ├─ RuleTemplateAndHardCutTests.cs
+   │  │  ├─ HeadingPathTests.cs
    │  │  └─ ChineseChunkJudge.Core.Tests.csproj
    │  └─ samples/DemoConsoleApp/
    │     ├─ Program.cs
@@ -75,9 +106,9 @@ ChineseChunkJudge/
 | `contract/openapi.yaml` | 判定服务 HTTP 接口（`/rules`、`/chunks/normalize`、`/judge`、`/judge/execute`） |
 | `contract/schema/*.json` | 七类数据结构的 JSON Schema（2020-12），含双库产物包与规则模板 |
 
-修改顺序固定：**先改 `contract/`，再同步 `impl/`**。参考实现不得私自增删契约核心字段，也不得删除或降级基础校验规则。
+修改顺序固定：**先改 `contract/`，再同步 `impl/`**。参考实现不得私自增删契约核心字段，也不得删除或降级基础校验规则。完整流程与提交规范见 `CONTRIBUTING.md`。
 
-当前契约版本 **0.9.0**：基础规则 CCJ-001..CCJ-017；0.2.0 落地双库产物 `ParentChildPackage`（默认关闭）与双父指针（`parentChunkId` 弃用保留至 1.0.0）；0.3.0 落地 Spec 侧 `ChunkRuleTemplate`（`/templates/resolve` 选型判定，强制 smart 兜底）与 CCJ-015 恰长硬切（error）；0.4.0 将 summary 的 `parentCoverageRatio` 更名为 `childWithParentRatio`（旧字段弃用保留至 1.0.0）；0.5.0 由 CCJ-008 补齐父块 ID / 配对 / pair 内子块的重复检测；0.6.0 再补齐跨父块悬空引用检测；0.7.0 新增 CCJ-016 切片标识唯一；0.7.1 固化 `MAJOR.MINOR.PATCH` 版本号规则（§12.1）；0.8.0 新增 `headingPath` 透传（C-17）与模板集选型 `/templates/resolve`（C-18）；0.9.0 新增 CCJ-017 标识与序号一致性（`chunkId={strategy}#{index}`、`index` 从 0 连续、`charCount` 与码位数一致）。C# 参考实现已同步，`dotnet build` 0 警告 0 错误、70 项单元测试全部通过（2026-11-14）。
+当前契约版本 **0.9.0**：基础规则 CCJ-001..CCJ-017；0.2.0 落地双库产物 `ParentChildPackage`（默认关闭）与双父指针（`parentChunkId` 弃用保留至 1.0.0）；0.3.0 落地 Spec 侧 `ChunkRuleTemplate`（`/templates/resolve` 选型判定，强制 smart 兜底）与 CCJ-015 恰长硬切（error）；0.4.0 将 summary 的 `parentCoverageRatio` 更名为 `childWithParentRatio`（旧字段弃用保留至 1.0.0）；0.5.0 由 CCJ-008 补齐父块 ID / 配对 / pair 内子块的重复检测；0.6.0 再补齐跨父块悬空引用检测；0.7.0 新增 CCJ-016 切片标识唯一；0.7.1 固化 `MAJOR.MINOR.PATCH` 版本号规则（§12.1）；0.8.0 新增 `headingPath` 透传（C-17）与模板集选型 `/templates/resolve`（C-18）；0.9.0 新增 CCJ-017 标识与序号一致性（`chunkId={strategy}#{index}`、`index` 从 0 连续、`charCount` 与码位数一致）。C# 参考实现已同步，`dotnet build` 0 警告 0 错误、70 项单元测试全部通过（2026-11-14 本地实测，CI 每次 push / PR 自动复跑）。
 
 ## 参考实现
 
@@ -100,22 +131,22 @@ ChineseChunkJudge/
 
 - **不内置文档解析**：PDF / Word / HTML 解析外置，输入只有文本与元信息。
 - **不内置切片算法**：切分器是外部插件，`samples/` 同样不含生产算法；Demo 通过 `--plugin` 反射加载外部执行器，未提供插件时以非零码退出，不输出报告。
-- 演示插件桩在仓库外：`D:\ChineseChunkJudge.Plugins\StructureExecutorStub`，不属于本仓库交付物。
+- 演示插件桩不在本仓库内（本机开发示例位于 `D:\ChineseChunkJudge.Plugins\StructureExecutorStub`，不属交付物；第三方使用须自备实现 `IChunkExecutor` 的插件）。
 
 ## 快速开始
 
 ```powershell
-# 1) 构建仓库外插件桩（一次性）
-dotnet build D:\ChineseChunkJudge.Plugins\StructureExecutorStub
+# 1) 构建外部插件桩（一次性；<插件目录> 替换为你自己的插件目录）
+dotnet build <插件目录>\StructureExecutorStub
 
 # 2) 构建本仓库并跑测试
-cd D:\ChineseChunkJudge\impl\csharp
+cd impl/csharp
 dotnet build
 dotnet test
 
 # 3) 用外部插件运行 Demo
 dotnet run --project samples/DemoConsoleApp -- `
-  --plugin "D:\ChineseChunkJudge.Plugins\StructureExecutorStub\bin\Debug\net10.0\StructureExecutorStub.dll" `
+  --plugin "<插件目录>\StructureExecutorStub\bin\Debug\net10.0\StructureExecutorStub.dll" `
   --size 600
 ```
 
@@ -126,9 +157,21 @@ Demo 会输出一份 `structure@600` 的样例 JudgeReport JSON；策略类型�
 1. **Metadata 固定五字段**：`Title`、`SourcePath`、`DocumentType`、`PageInfo`、`CreateTime`，不可删减、不可改名、不可改类型。
 2. **质检强制规则**：单块上限 1500 字符告警（CCJ-004）、空切片告警（CCJ-003）；可扩展校验，不可删除基础校验。
 3. **策略命名**：`{type}@{targetSize}`，如 `structure@600`、`sentence@900`；基线由 ChunkJudgeBench 产出。
-4. **编码**：全仓库 UTF-8。
+4. **编码**：全仓库 UTF-8；文本文件入库统一 LF（`.gitattributes` / `.editorconfig`）。
 5. **契约语言无关，实现可扩展**：`impl/csharp` 为首个参考实现；任何语言实现只要输入输出符合 `contract/schema/*.json` 与 `contract/openapi.yaml`，即属同一契约下的实现（规划：C# / Go / Python / Rust），各实现不得增删契约核心字段、不得降级基础规则。
 6. **算法外置**：本仓库（含 samples）不交付切分算法与文档解析器，执行器由外部插件实现 `IChunkExecutor` 注入。
+
+## 版本与发布
+
+- 契约版本 `0.9.0` 对应 tag `v0.9.0`；版本号规则见 `contract/rules.md` §12.1，三处（`rules.md` 表头、`openapi.yaml` 的 `info.version`、`ContractConstants.ContractVersion`）必须同值。
+- tag 只标注契约版本，不代表实现已稳定；`0.x` 阶段仍可能出现破坏性调整，弃用字段统一保留至 `1.0.0` 清理。
+
+## 参与与自动化检查
+
+- 贡献流程、提交规范、PR 自查清单见 `CONTRIBUTING.md`；契约先行的顺序不可颠倒。
+- 安全问题按 `SECURITY.md` 私下报告，不要开公开 Issue。
+- 行为准则见 `CODE_OF_CONDUCT.md`；Issue 与 PR 模板在 `.github/` 下。
+- CI（`.github/workflows/ci.yml`）在 push 与 PR 到 `main` 时执行 `dotnet build` 与 `dotnet test`，当前基线为 0 警告 0 错误、70 项测试通过。
 
 ## 许可
 
