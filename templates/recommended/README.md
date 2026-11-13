@@ -11,6 +11,8 @@
 
 ## 当前清单（6 份，均面向 `rag_retrieval`）
 
+> 14 类的默认模板、缺口与 Bench 分组见 `docs/12-类别到默认模板与Bench分组映射-2026-11-14.md`；本目录只提供 6 类 starter，不是全量映射。
+
 | 文件 | 类别 | 结构假设 | 兜底 |
 | --- | --- | --- | --- |
 | `law_regulation.json` | `law_regulation` | 条章 → （一）分节 → 表格 → 弱结构 | smart 1200 |
