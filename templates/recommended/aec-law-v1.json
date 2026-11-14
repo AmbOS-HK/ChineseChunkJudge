@@ -1,0 +1,44 @@
+{
+  "templateId": "aec-law-v1",
+  "version": "0.1.0",
+  "name": "AEC 法规库切片模板首稿（判定单 V1.0 草案，非冻结默认）",
+  "appliesTo": {
+    "documentCategories": ["law_regulation"],
+    "traits": ["article_numbering", "section_numbering", "weak_structure"]
+  },
+  "decision": {
+    "rules": [
+      {
+        "traits": ["article_numbering"],
+        "chunkMode": "regex",
+        "pattern": "(?=第[一二三四五六七八九十百零〇0-9]+[条章])",
+        "chunkSize": 1200,
+        "forbidLineStartAnchor": true,
+        "forbidHeadingSplit": true,
+        "preserveSeparator": true
+      },
+      {
+        "traits": ["section_numbering"],
+        "chunkMode": "regex",
+        "pattern": "(?=（[一二三四五六七八九十]+）)",
+        "chunkSize": 1200,
+        "forbidLineStartAnchor": true,
+        "forbidHeadingSplit": true,
+        "preserveSeparator": true
+      },
+      {
+        "traits": ["weak_structure"],
+        "chunkMode": "smart",
+        "chunkSize": 1200
+      }
+    ],
+    "fallback": {
+      "chunkMode": "smart",
+      "chunkSize": 1200
+    }
+  },
+  "validation": {
+    "hardCutZero": true,
+    "acceptanceRef": "aec-27q"
+  }
+}

@@ -73,14 +73,16 @@ ChineseChunkJudge/
 │     ├─ parent-child-package.json    # 双库产物包（0.2.0 新增）
 │     └─ chunk-rule-template.json     # 切片规则模板（0.3.0 新增）
 ├─ templates/
-│  └─ recommended/                    # 推荐模板族（6 类 + 说明）
+│  └─ recommended/                    # 6 份 starter + 2 份 AEC 判定单首稿（均不自动加载）
 │     ├─ README.md
 │     ├─ engineering_project_report.json
 │     ├─ government_plan.json
 │     ├─ judicial_document.json
 │     ├─ law_regulation.json
 │     ├─ manual.json
-│     └─ technical_standard.json
+│     ├─ technical_standard.json
+│     ├─ aec-law-v1.json              # 判定单 V1.0 首稿，非冻结默认
+│     └─ aec-plans-v1.json            # 判定单 V1.0 首稿，非冻结默认
 └─ impl/
    ├─ csharp/                         # 首个参考实现（net10.0），已实现
    │  ├─ ChineseChunkJudge.sln
@@ -190,8 +192,8 @@ Demo 会输出一份 `structure@600` 的样例 JudgeReport JSON；策略类型�
 - 贡献流程、提交规范、PR 自查清单见 `CONTRIBUTING.md`；契约先行的顺序不可颠倒。
 - 安全问题按 `SECURITY.md` 私下报告，不要开公开 Issue。
 - 行为准则见 `CODE_OF_CONDUCT.md`；Issue 与 PR 模板在 `.github/` 下。
-- CI（`.github/workflows/ci.yml`）在 push 与 PR 到 `main` 时执行四类检查：`check_contract_version.py`（三处版本同值）、`check_contract_integrity.py`（Schema / `$ref` / 模板与产物样本结构）、`check_contract_bump.py`（PR 上校验"改契约必升版"，一次只升一个段），以及 `dotnet build` + `dotnet test`；当前基线为 0 警告 0 错误、101 项测试通过。
-- 契约缺陷与整改状态见 `docs/15`；本轮审查结论与关闭证据见 `docs/14`、`docs/16`。当前 4 项阻断级契约缺陷（K-03、K-04、K-05、K-11）仍开放，契约不宜宣布冻结。
+- CI（`.github/workflows/ci.yml`）在 push 与 PR 到 `main` 时执行四类检查：`check_contract_version.py`（三处版本同值）、`check_contract_integrity.py`（Schema / `$ref` / 模板与产物样本结构）、`check_contract_bump.py`（PR 上校验"改契约必升版"，一次只升一个段），以及 `dotnet build` + `dotnet test`。登记的本地结果是 build 0 警告 0 错误、101 项测试通过（见上文与 `docs/22`、`docs/23`）。
+- 契约缺陷与整改状态见 `docs/15`；0.10.0 关闭结论以 `docs/15` §6 为准（证据见 `docs/23`），并与 `docs/24`、`HANDOFF.md` 一致。该节统计 25 项已关闭，其中包含 K-03、K-04、K-05、K-11（K-03..K-11 均已关闭）；K-15 未做；K-02 仍锁定 1.0.0，K-28 仍待宿主。14 类文档类别保持未冻结草案，只写在 `docs/05`、`docs/11`、`docs/12`。上文的 `dotnet test` 101/101 是 2026-11-14 的本地记录，本次文档对齐没有重跑该命令。
 
 ## 许可
 
