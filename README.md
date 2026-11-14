@@ -29,6 +29,8 @@ ChineseChunkJudge/
 │  │  ├─ feature_request.yml
 │  │  └─ config.yml
 │  └─ PULL_REQUEST_TEMPLATE.md
+├─ scripts/
+│  └─ check_contract_version.py       # 契约版本三处同值校验（CI 调用）
 ├─ docs/                              # 规划与审查文档，非标准
 │  ├─ 00-定位与边界.md
 │  ├─ 01-术语表.md
@@ -165,6 +167,7 @@ Demo 会输出一份 `structure@600` 的样例 JudgeReport JSON；策略类型�
 ## 版本与发布
 
 - 契约版本 `0.9.0` 对应 tag `v0.9.0`；版本号规则见 `contract/rules.md` §12.1，三处（`rules.md` 表头、`openapi.yaml` 的 `info.version`、`ContractConstants.ContractVersion`）必须同值。
+- 三处同值由 `scripts/check_contract_version.py` 自动校验（`python scripts/check_contract_version.py`），CI 作业 `contract-version` 在每次 push / PR 时执行。
 - tag 只标注契约版本，不代表实现已稳定；`0.x` 阶段仍可能出现破坏性调整，弃用字段统一保留至 `1.0.0` 清理。
 
 ## 参与与自动化检查

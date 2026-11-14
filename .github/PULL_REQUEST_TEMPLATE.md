@@ -15,6 +15,7 @@
 
 - [ ] 先改 `contract/`，再同步 `impl/`
 - [ ] 版本号三处同值：`rules.md` 表头、`openapi.yaml` 的 `info.version`、`ContractConstants.ContractVersion`
+- [ ] `python scripts/check_contract_version.py` 本地通过（退出码 0）
 - [ ] 基础规则只增不删、不降级；未删除或降级既有校验
 - [ ] 未触碰 `docs/04-对外文案口径.md` §3 的术语红线
 

@@ -21,6 +21,14 @@
 
 一次变更只递增一个段；同一批次同时含 minor 与 patch 性质时取较高位。0.x 阶段同样适用。判定表见 `contract/rules.md` §12.1。
 
+自动校验：
+
+```powershell
+python scripts/check_contract_version.py
+```
+
+退出码 `0` 表示三处同值且格式合法；`1` 表示任一缺失、格式非法（含前导零）或三处不等，并在输出里指出是哪一处。CI 的 `contract-version` 作业在每次 push / PR 到 `main` 时执行同一条命令，提 PR 前请先在本地跑通。
+
 ## 3. 环境与构建
 
 - .NET SDK 10.0.x，目标框架 `net10.0`

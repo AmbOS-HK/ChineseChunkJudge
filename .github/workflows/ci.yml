@@ -11,6 +11,15 @@ permissions:
   contents: read
 
 jobs:
+  contract-version:
+    name: contract version (3 places must match)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check contract version is identical in rules.md / openapi.yaml / ContractConstants
+        run: python3 scripts/check_contract_version.py
+
   build-and-test:
     name: build & test (net10.0)
     runs-on: ubuntu-latest
