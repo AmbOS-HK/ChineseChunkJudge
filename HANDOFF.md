@@ -234,4 +234,4 @@ git -C "D:\ChineseChunkJudge" rev-list --count origin/main..HEAD   # 必须为 0
 git -C "D:\ChineseChunkJudge" status --porcelain                   # 必须为空
 ```
 
-<div align="left">注：曾出现过本机到 `github.com:443` 间歇不可达、而 `api.github.com` 正常的情况，此时 `git push` 会连续超时。这不是仓库问题，恢复后重推即可；不要改用无关通道或改写历史绕过。</div>
+> 注：曾出现过本机到 `github.com:443` 间歇不可达、而 `api.github.com` 正常的情况，此时 `git push` 会连续超时。这不是仓库问题，恢复后重推即可；**不要改用无关通道或改写历史绕过**。
