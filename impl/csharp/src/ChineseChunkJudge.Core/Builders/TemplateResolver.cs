@@ -7,6 +7,7 @@ namespace ChineseChunkJudge.Core.Builders;
 /// 选型判定：按规则模板决策切分方式与参数，不执行切分。
 /// 单模板形态下 appliesTo 不参与准入校验（0.7.1 行为）；模板集形态（0.8.0）按类别过滤后按数组顺序择优。
 /// 模板在进入选型前整体校验：所有规则（含未命中规则）都要合法，避免坏规则潜伏到命中时才报错。
+/// 非 fallback 决策规则的 traits 不得为空：Enumerable.All 对空序列恒为真，空数组会变成通配并遮蔽后续规则。
 /// </summary>
 public sealed class TemplateResolver
 {
@@ -187,6 +188,12 @@ public sealed class TemplateResolver
 
     private static void ValidateRule(DecisionRule rule, int index)
     {
+        if (rule.Traits is null || rule.Traits.Count == 0)
+        {
+            throw new ArgumentException(
+                $"decision.rules[{index}].traits 不得为空：空数组会使该规则在选型时恒命中并遮蔽后续规则。");
+        }
+
         ValidateClosedTraits(rule.Traits, $"decision.rules[{index}].traits");
 
         bool isRegex = string.Equals(rule.ChunkMode, ChunkModes.Regex, StringComparison.Ordinal);

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ChineseChunkJudge.Core.Builders;
 using ChineseChunkJudge.Core.Models;
 using ChineseChunkJudge.Core.RuleEngine;
@@ -494,6 +495,112 @@ public sealed class RuleTemplateAndHardCutTests
 
         Assert.Throws<ArgumentNullException>(() =>
             new TemplateResolver().Resolve(templates, ["law"], [ChunkTraits.ArticleNumbering]));
+    }
+
+    [Fact]
+    public void Resolve_EmptyTraitsOnRegularRule_ThrowsBeforeItCanShadow()
+    {
+        var template = CreateTemplate();
+        var invalid = template with
+        {
+            Decision = template.Decision with
+            {
+                Rules =
+                [
+                    template.Decision.Rules[0] with { Traits = [] },
+                    template.Decision.Rules[1]
+                ]
+            }
+        };
+
+        var ex = Assert.Throws<ArgumentException>(() =>
+            new TemplateResolver().Resolve(invalid, ["law"], [ChunkTraits.WeakStructure]));
+
+        Assert.Contains("decision.rules[0].traits", ex.Message);
+        Assert.Contains("不得为空", ex.Message);
+    }
+
+    [Fact]
+    public void Resolve_RealTraits_StillRequireEveryListedTrait()
+    {
+        var template = CreateTemplate();
+        var withConjunction = template with
+        {
+            Decision = template.Decision with
+            {
+                Rules =
+                [
+                    new DecisionRule
+                    {
+                        Traits = [ChunkTraits.ArticleNumbering, ChunkTraits.DenseTable],
+                        ChunkMode = ChunkModes.Page,
+                        ChunkSize = 500
+                    },
+                    template.Decision.Rules[0],
+                    template.Decision.Rules[1]
+                ]
+            }
+        };
+
+        var partial = new TemplateResolver().Resolve(withConjunction, ["law"], [ChunkTraits.ArticleNumbering]);
+        Assert.False(partial.UsedFallback);
+        Assert.Equal(1, partial.MatchedRuleIndex);
+        Assert.Equal(ChunkModes.Regex, partial.ChunkMode);
+        Assert.Equal(1200, partial.ChunkSize);
+
+        var full = new TemplateResolver().Resolve(
+            withConjunction,
+            ["law"],
+            [ChunkTraits.ArticleNumbering, ChunkTraits.DenseTable]);
+        Assert.False(full.UsedFallback);
+        Assert.Equal(0, full.MatchedRuleIndex);
+        Assert.Equal(ChunkModes.Page, full.ChunkMode);
+        Assert.Equal(500, full.ChunkSize);
+    }
+
+    [Fact]
+    public void Resolve_RecommendedTemplates_StillResolve()
+    {
+        string directory = Path.Combine(FindRepositoryRoot(), "templates", "recommended");
+        string[] files = Directory.GetFiles(directory, "*.json");
+        Assert.NotEmpty(files);
+
+        var jsonOptions = ChunkJson.CreateOptions();
+        foreach (string file in files)
+        {
+            var template = JsonSerializer.Deserialize<ChunkRuleTemplate>(File.ReadAllText(file), jsonOptions);
+            Assert.NotNull(template);
+            Assert.NotEmpty(template!.Decision.Rules);
+            Assert.NotEmpty(template.Decision.Rules[0].Traits);
+
+            string category = template.AppliesTo.DocumentCategories[0];
+            string trait = template.Decision.Rules[0].Traits[0];
+            var decision = new TemplateResolver().Resolve(template, [category], [trait]);
+
+            Assert.False(decision.UsedFallback);
+            Assert.Equal(0, decision.MatchedRuleIndex);
+            Assert.Equal(template.TemplateId, decision.TemplateId);
+            Assert.Equal(template.Decision.Rules[0].ChunkMode, decision.ChunkMode);
+            Assert.Equal(template.Decision.Rules[0].ChunkSize, decision.ChunkSize);
+        }
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            bool hasRecommended = Directory.Exists(Path.Combine(dir.FullName, "templates", "recommended"));
+            bool hasReadme = File.Exists(Path.Combine(dir.FullName, "README.md"));
+            if (hasRecommended && hasReadme)
+            {
+                return dir.FullName;
+            }
+
+            dir = dir.Parent;
+        }
+
+        throw new InvalidOperationException("找不到仓库根目录（templates/recommended）。");
     }
 
     private static (DocumentFeature Document, ContractChunk[] Chunks, ChunkStrategyOptions Options) CreateCase(string text)
