@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ChineseChunkJudge Adjudication API
-  version: 0.10.0
+  version: 0.10.1
   description: >-
     切片判定服务的 HTTP 契约。请求与响应结构引用 contract/schema 下的 JSON Schema，
     与 contract/rules.md 同属权威标准。参考实现为进程内库，本契约用于跨语言一致性验证。
@@ -351,20 +351,7 @@ components:
           items:
             $ref: '#/components/schemas/RuleDescriptor'
     RuleDescriptor:
-      type: object
-      additionalProperties: false
-      required: [ruleId, description, severity, isBaseRule]
-      properties:
-        ruleId:
-          type: string
-          pattern: '^CCJ-(?:[0-9]{3}|X[0-9]{3})$'
-        description:
-          type: string
-        severity:
-          type: string
-          enum: [info, warning, error]
-        isBaseRule:
-          type: boolean
+      $ref: './schema/judge-report.json#/$defs/ruleDescriptor'
     ErrorResponse:
       type: object
       additionalProperties: false

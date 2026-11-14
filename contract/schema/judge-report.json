@@ -124,10 +124,7 @@
           "type": "string",
           "pattern": "^CCJ-(?:[0-9]{3}|X[0-9]{3})$"
         },
-        "severity": {
-          "type": "string",
-          "enum": ["info", "warning", "error"]
-        },
+        "severity": { "$ref": "#/$defs/severity" },
         "chunkId": {
           "type": ["string", "null"],
           "description": "文档级问题为 null。"
@@ -144,7 +141,11 @@
         }
       }
     },
-    "appliedRule": {
+    "severity": {
+      "type": "string",
+      "enum": ["info", "warning", "error"]
+    },
+    "ruleDescriptor": {
       "type": "object",
       "additionalProperties": false,
       "required": ["ruleId", "description", "severity", "isBaseRule"],
@@ -154,12 +155,12 @@
           "pattern": "^CCJ-(?:[0-9]{3}|X[0-9]{3})$"
         },
         "description": { "type": "string", "minLength": 1 },
-        "severity": {
-          "type": "string",
-          "enum": ["info", "warning", "error"]
-        },
+        "severity": { "$ref": "#/$defs/severity" },
         "isBaseRule": { "type": "boolean" }
       }
+    },
+    "appliedRule": {
+      "$ref": "#/$defs/ruleDescriptor"
     }
   }
 }

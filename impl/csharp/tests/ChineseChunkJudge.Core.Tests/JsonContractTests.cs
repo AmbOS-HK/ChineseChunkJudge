@@ -89,7 +89,7 @@ public sealed class JsonContractTests
     {
         var manifest = new ChunkJudgeService().GetRuleManifest();
 
-        Assert.Equal("0.10.0", manifest.ContractVersion);
+        Assert.Equal("0.10.1", manifest.ContractVersion);
         Assert.Equal(21, manifest.Rules.Count);
         Assert.Equal(
             ChunkRuleEngine.DefaultBaseRuleIds.OrderBy(id => id, StringComparer.Ordinal),

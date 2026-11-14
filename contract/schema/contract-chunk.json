@@ -52,8 +52,7 @@
       "description": "Unicode 码位数量；必须等于 text 的码位数，由 CCJ-017 强制。"
     },
     "unitKind": {
-      "type": "string",
-      "enum": ["heading", "article", "paragraph", "sentence", "table", "code"]
+      "$ref": "./raw-chunk.json#/$defs/unitKind"
     },
     "unitKey": {
       "type": "string"

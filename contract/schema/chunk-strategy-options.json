@@ -45,8 +45,7 @@
       }
     },
     "chunkMode": {
-      "type": "string",
-      "enum": ["regex", "smart", "page"],
+      "$ref": "./chunk-rule-template.json#/$defs/chunkMode",
       "description": "切分方式，由模板决策回填；page 模式豁免 CCJ-015。"
     },
     "parentChild": {

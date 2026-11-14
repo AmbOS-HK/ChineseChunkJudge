@@ -96,7 +96,7 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 
 ### 4.3 契约遗留
 
-- **K-15 未做**：`chunkMode` / `unitKind` / `severity` 抽 `$defs`、`RuleDescriptor` 与 `appliedRule` 合并；纯结构收敛，留后续 PATCH。
+- **K-15 已关闭（0.10.1）**：`chunkMode` / `unitKind` / `severity` 已抽单一 `$defs`，`RuleDescriptor` 与 `appliedRule` 已合并；纯结构收敛。证据见 `docs/16` §6。
 - **K-28 开放**：无 HTTP 宿主，400/404/413 与资源边界无法端到端验证；宿主落地后另起 MINOR。
 - **K-02 锁定 1.0.0**：`parentChunkId` 删除、`structuralParentChunkId` 转必填。
 - **C-01 / C-02 / C-03**：类别枚举、特征产出方边界与 400 口径、`payload` 未排期；C-01 待 14 类实证。
