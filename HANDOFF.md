@@ -7,7 +7,7 @@
 
 ## 0. 交接前必做：先确认 GitHub 上是当前状态
 
-截至交接准备时，本地 `main` **领先 `origin/main` 多个提交**，工作树干净。Grok Bot 从 GitHub 拉取，若不先推送，它拿到的仍是 0.10.0 之前的版本。**提交数量以实际 `git log origin/main..HEAD` 为准，不要照抄本文数字。**
+截至 2026-11-14 11:55 实测：本地 `main` **领先 `origin/main` 8 个提交**。已两次尝试推送，均失败——一次 `Could not resolve host: github.com`，一次 `Failed to connect to github.com:443 after 22176 ms`。**`origin/main` 仍是 0.10.0 之前的版本，Grok Bot 此时从 GitHub 拉取拿不到本次交接内容。** 工作树另有 2 项未提交改动（`docs/21` 修改、`docs/22-小循环首跑记录` 新增），属 AEC.Chat 小循环作业线，不在本次交接范围。推送是否完成以业主实测 `git log origin/main..HEAD` 为准，不要照抄本文数字。
 
 交接前由业主执行：
 
@@ -192,6 +192,7 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 **历史与台账**：
 
 - `docs/14` 审查快照、`docs/15` 整改台账、`docs/16` 复检、`docs/17` 0.10.0 清单、`docs/22` 实现偏差复检、`docs/23` 落契记录
+- **注意 `docs/22` 当前有两个同号文件**：`22-实现偏差修复复检-2026-11-14.md` 与 `22-小循环首跑记录-2026-11-14.md`（后者属 AEC 小循环作业线）。不要按编号唯一索引；引用时写全文件名。合并前不要删除或改名任何一个。
 - `docs/10` 是旧版 12 类审核记录，不是当前类别定义
 - `docs/21` 是 AEC.Chat 侧方案，非契约审查线
 
