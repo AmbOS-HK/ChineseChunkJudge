@@ -108,7 +108,7 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 
 1. 从 GitHub 克隆，确认 `HEAD` 含 0.10.0 与 docs/23。
 2. 跑 `dotnet test`（101 项）与三条门禁。
-3. 不要改 `contract/`；先读 `README.md`、`docs/00`、`docs/05`、`docs/11`、`docs/12`、`docs/14`、`docs/15`、`docs/17`、`docs/23`。
+3. **任务 A 阶段不改 `contract/`**；基线跑通并经业主批准后，允许按第 8 节流程改契约——必须升版、跑三条门禁、同步 `impl/` 与测试。先读 `README.md`、`docs/00`、`docs/05`、`docs/11`、`docs/12`、`docs/14`、`docs/15`、`docs/17`、`docs/23`。
 
 **验收**：101/101 通过、三条门禁 PASS、`git status` 空。
 
@@ -134,7 +134,9 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 
 **验收**：同任务 B；另加“表格不拦腰切”“条款边界不跨条”的正反用例。
 
-### 任务 D：Bench 接入分组
+### 任务 D：Bench 接入分组（不在本次交接范围）
+
+> 本次交接只覆盖 `ChineseChunkJudge` 一仓。以下工作在独立仓 `D:\ChunkJudgeBench`，须由该仓单独授权与验收，Grok Bot 不得在本仓内实现，也不得把评测逻辑并入本仓。
 
 在 `D:\ChunkJudgeBench` 完成：
 
@@ -146,7 +148,9 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 
 **验收**：能输出 14 类覆盖表；每类样本数可见；无样本的组明确标“未验证”，不得合成总分。
 
-### 任务 E：类别冻结门禁
+### 任务 E：类别冻结门禁（跨仓前置，未排期）
+
+> kappa 与 A/B 证据需由独立仓 `ChunkJudgeBench` 产出，不在本次交接范围。本仓只承接证据齐备且业主批准后的枚举落地；未齐备前不得改 `contract/`。
 
 - 每类 ≥30 文档、≥60 问答；
 - 双人标注 Cohen's kappa ≥0.70；单类 ≥0.60；
