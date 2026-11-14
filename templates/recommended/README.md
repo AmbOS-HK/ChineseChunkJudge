@@ -30,6 +30,19 @@
 2. 校验结构：按 `contract/schema/chunk-rule-template.json` 验证；
 3. 经 Bench 评测后再调整 `chunkSize`、`parentChild` 等数值，并把结论回填到部署侧模板版本，不回写本目录。
 
+## AEC 判定单首稿（草案）
+
+同目录另有两份首稿，放在这里是为了走现有的 `templates/recommended/*.json` 结构校验。它们不是上表 6 份 `*-starter` 的改写，也不是冻结的生产默认。`version` 为 `0.1.0`；`templateId` 里的 `v1` 只表示对应《切片判定单（V1.0）》。宿主、`TemplateResolver` 与 Demo 不得自动加载。选型 → 百炼实切 → 回拉切片 → 判定这条小循环尚未在本仓实施。
+
+分隔符按判定单原文抄录，正则规则不带 `^` 多行锚（`forbidLineStartAnchor: true`）。`smart` 表示判定单里的「智能切分、不传 chunk-mode」。未命中任何规则时走该模板的 `fallback`，不允许空决策。`pdf_no_structure` 没有单独规则，因此落到 fallback；页模式 PDF 不作为契约判定路径，两份模板都没有 `chunkMode=page`。AEC 检索字段 `region`、`admin_level`、`year`、`plan_period` 不进入契约 `document.metadata`。
+
+| 文件 | templateId | 决策（先匹配先生效） | 兜底 |
+| --- | --- | --- | --- |
+| `aec-law-v1.json` | `aec-law-v1` | 条章正则 1200 → `（一）` 正则 1200 → 弱结构 smart 1200。无 `dense_table` 分支 | smart 1200 |
+| `aec-plans-v1.json` | `aec-plans-v1` | 密集表 smart 1500 → 条章正则 1200 → `（一）` 正则 1200 → 弱结构 smart 1000 | smart 1000 |
+
+条章正则：`(?=第[一二三四五六七八九十百零〇0-9]+[条章])`。`（一）` 正则：`(?=（[一二三四五六七八九十]+）)`。规划文本的条章分支复用这条条章正则；`（一）` 分节仍用分节正则，与 `docs/21` §5 的字段映射一致。法规模板不设密集表分支。
+
 ## 明确不做的事
 
 - 不提供 `rag_generation` / `model_training` 模板（相关维度尚未冻结）；
