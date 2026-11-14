@@ -1,7 +1,7 @@
 # 21 AEC.Chat 小循环构建方案（2026-11-14）
 
 - 状态：**方案，未实施**。成文时本文只写流程，当时没有改动 `contract/`、`impl/`、`templates/`。这句话记录的是当时的写作范围；此后修改 `templates/` 走仓库自己的变更流程。
-- 草案文件：下方 §5 的 `aec-law-v1` / `aec-plans-v1` JSON 仍是方案正文。当前 `main` 的 `templates/recommended/` 没有这两份文件。独立 PR #1（分支 `cursor/align-docs-aec-draft-templates-24a5`）在另行加入这两份首稿，且不自动加载；该 PR 合入 `main` 之前，这两份文件不算已经在本分支或 `main` 上。
+- 草案文件：下方 §5 的 `aec-law-v1` / `aec-plans-v1` JSON 仍是方案正文。这两份 `0.1.0` 首稿已在 `main` 的 `templates/recommended/`（`aec-law-v1.json`、`aec-plans-v1.json`，经 PR #1 合入），不是冻结默认，也不会被自动加载。
 - 依据：`contract/`（现行 0.10.0，CCJ-018..021 已生效）、`docs/08`（模板生产线）、`docs/12`（类别→模板→Bench 映射）、`docs/14`（K-28 无 HTTP 宿主）、`docs/18`、AEC.Chat `Law/_src/bailian/切片判定单.md` 与建库脚本、`D:\ChunkJudgeBench\HANDOFF.md`、`docs/22`（首跑记录）。
 - 约束：本文只定义流程与接口形态，不新增契约条目；所有"当前不可用"的判断均给出证据位置。
 
@@ -124,7 +124,7 @@ AEC 的 `region / admin_level / year / plan_period` 留在 AEC 侧做检索过�
 | 27 问回归 | `validation.acceptanceRef="aec-27q"`（执行归 Bench/大循环） |
 | `禁 ^ 多行锚`、`禁 h3 切分`、`保留分隔符` | `forbidLineStartAnchor/forbidHeadingSplit/preserveSeparator` 三个枚举字段 |
 
-两份迁移草案（下方 JSON 为方案正文；写作时已按 `chunk-rule-template.json` 校验 PASS，尚未标定。当前 `main` 未收录这两份文件；PR #1 另行加入首稿且不自动加载，见文首）：
+两份迁移草案（下方 JSON 为方案正文；写作时已按 `chunk-rule-template.json` 校验 PASS，尚未标定。这两份 `0.1.0` 首稿已在 `main` 的 `templates/recommended/`，不是冻结默认，也不会被自动加载，见文首）：
 
 `aec-law-v1`（3 条规则，fallback smart 1200）：
 
