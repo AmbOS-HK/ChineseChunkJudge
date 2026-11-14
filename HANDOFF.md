@@ -7,7 +7,7 @@
 
 ## 0. 交接前必做：先确认 GitHub 上是当前状态
 
-截至本文件生成时，本地 `main` **领先 `origin/main` 5 个提交**，工作树干净；本文件自身提交后会变成 6 个。Grok Bot 从 GitHub 拉取，若不先推送，它拿到的仍是 0.9.0 之前的版本。以实际 `git log origin/main..HEAD` 为准。
+截至交接准备时，本地 `main` **领先 `origin/main` 多个提交**，工作树干净。Grok Bot 从 GitHub 拉取，若不先推送，它拿到的仍是 0.10.0 之前的版本。**提交数量以实际 `git log origin/main..HEAD` 为准，不要照抄本文数字。**
 
 交接前由业主执行：
 
@@ -19,8 +19,10 @@ $g = "C:\Program Files\Git\cmd\git.exe"
 & $g -C "D:\ChineseChunkJudge" log --oneline origin/main..HEAD   # 应为空
 ```
 
-当前领先的 5 个提交（以实际 `git log` 为准）：
+当前领先的 7 个提交（以实际 `git log` 为准）：
 
+- `4525aad` docs: 增加交接给 Grok Bot 的 HANDOFF
+- `6f71326` docs: 新增交接说明（docs/24），面向接手代理
 - `42dca21` docs: 契约审查、整改台账与 0.10.0 落契全套记录（docs/14–23）
 - `6656eca` chore(ci): 契约门禁扩展——完整性检查覆盖产物样本、新增升版校验、CI 四作业
 - `5299a4a` feat(contract): 0.10.0 契约收口，新增 CCJ-018..021
@@ -199,7 +201,7 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 
 ## 8. 交接确认清单
 
-- [ ] `origin/main` 已包含 `42dca21` 及之前全部提交
+- [ ] `origin/main` 已包含交接时本地 `HEAD` 及之前全部提交（本次交接至少应包含 `4525aad`）
 - [ ] `git status --porcelain` 为空
 - [ ] `dotnet test` 101/101
 - [ ] 三条门禁 PASS
