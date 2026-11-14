@@ -25,8 +25,7 @@
       "minimum": 0
     },
     "unitKind": {
-      "type": "string",
-      "enum": ["heading", "article", "paragraph", "sentence", "table", "code"]
+      "$ref": "#/$defs/unitKind"
     },
     "unitKey": {
       "type": "string"
@@ -47,6 +46,12 @@
       "type": "array",
       "description": "祖先标题链，自最外层到最内层；不含块自身标题。由执行器/解析侧产出，本仓只透传保序，不推断、不补全。",
       "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "unitKind": {
+      "type": "string",
+      "enum": ["heading", "article", "paragraph", "sentence", "table", "code"]
     }
   }
 }

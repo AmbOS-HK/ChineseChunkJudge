@@ -76,8 +76,7 @@
       "required": ["kind", "startOffset", "endOffset"],
       "properties": {
         "kind": {
-          "type": "string",
-          "enum": ["heading", "article", "paragraph", "sentence", "table", "code"]
+          "$ref": "./raw-chunk.json#/$defs/unitKind"
         },
         "startOffset": {
           "type": "integer",
