@@ -1,0 +1,53 @@
+{
+  "documentId": "doc-sample-0001",
+  "strategy": "structure@600",
+  "generatedAt": "2026-11-14T09:00:00+08:00",
+  "parentChunks": [
+    {
+      "parentChunkId": "structure@600#p0",
+      "index": 0,
+      "text": "第一段。",
+      "startOffset": 0,
+      "endOffset": 4,
+      "strategy": "structure@600",
+      "metadata": {
+        "title": "示例文档",
+        "sourcePath": "docs/sample.md",
+        "documentType": "markdown",
+        "pageInfo": "1",
+        "createTime": "2026-11-14T09:00:00+08:00"
+      },
+      "charCount": 4,
+      "startsAtUnitBoundary": true,
+      "endsAtUnitBoundary": true
+    },
+    {
+      "parentChunkId": "structure@600#p1",
+      "index": 1,
+      "text": "第二段。",
+      "startOffset": 4,
+      "endOffset": 8,
+      "strategy": "structure@600",
+      "metadata": {
+        "title": "示例文档",
+        "sourcePath": "docs/sample.md",
+        "documentType": "markdown",
+        "pageInfo": "1",
+        "createTime": "2026-11-14T09:00:00+08:00"
+      },
+      "charCount": 4,
+      "startsAtUnitBoundary": true,
+      "endsAtUnitBoundary": true
+    }
+  ],
+  "pairs": [
+    {
+      "contextParentChunkId": "structure@600#p0",
+      "childChunkIds": ["structure@600#0"]
+    },
+    {
+      "contextParentChunkId": "structure@600#p1",
+      "childChunkIds": ["structure@600#1"]
+    }
+  ]
+}

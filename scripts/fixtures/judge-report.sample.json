@@ -1,0 +1,129 @@
+{
+  "reportId": "probe-doc:structure@1200:4fad77275f984c39ab26ad6d990cf100",
+  "documentId": "probe-doc",
+  "strategy": "structure@1200",
+  "targetSize": 1200,
+  "generatedAt": "2026-11-14T08:25:56.348849+08:00",
+  "passed": true,
+  "summary": {
+    "chunkCount": 2,
+    "totalCharCount": 32,
+    "minCharCount": 15,
+    "maxCharCount": 17,
+    "averageCharCount": 16,
+    "emptyChunkCount": 0,
+    "oversizedChunkCount": 0,
+    "parentChunkCount": 0,
+    "childWithParentCount": 0,
+    "parentCoverageRatio": 0,
+    "childWithParentRatio": 0,
+    "parentCharP95": 0,
+    "oversizedParentChunkCount": 0,
+    "hardCutChunkCount": 0
+  },
+  "issues": [],
+  "appliedRules": [
+    {
+      "ruleId": "CCJ-001",
+      "description": "元信息五字段（title、sourcePath、documentType、pageInfo、createTime）必须完整，任一缺失即判不通过。",
+      "severity": "error",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-002",
+      "description": "策略名必须符合 {type}@{targetSize}，type 仅含小写字母、数字、下划线、连字符。",
+      "severity": "error",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-003",
+      "description": "切片正文为空或仅空白时告警。",
+      "severity": "warning",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-004",
+      "description": "单块字符数超过契约上限 1500 时告警。",
+      "severity": "warning",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-005",
+      "description": "偏移必须落在正文档内，且 text 与正文区间逐字一致。",
+      "severity": "error",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-006",
+      "description": "相邻切片区间不得重叠。",
+      "severity": "warning",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-007",
+      "description": "策略选项必须落在契约规定区间内，且不得放宽单块上限。",
+      "severity": "error",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-008",
+      "description": "childChunkIds 非空、配对 ID 可解析、父子两侧一致、每个子块仅归属一个上下文父块，父块 ID 唯一且跨父块引用可解析。",
+      "severity": "error",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-009",
+      "description": "上下文父块字符数超过 parentMaxChars 时告警（不阻断）。",
+      "severity": "warning",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-010",
+      "description": "上下文父块须为原文精确子串、互不重叠，且拼接后等价于原文。",
+      "severity": "error",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-011",
+      "description": "跨父块引用构成有向无环图，检出环路（含自引用）告警。",
+      "severity": "warning",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-012",
+      "description": "子块派生自父块区间，子块区间必须 ⊆ 归属 contextParent 区间。",
+      "severity": "error",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-013",
+      "description": "parentChild.enabled=false 时，输出不得携带 parentChunks 或 contextParentChunkId，否则判定不通过。",
+      "severity": "error",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-014",
+      "description": "parentChunkId（deprecated）与 structuralParentChunkId 同时出现时值必须一致。",
+      "severity": "warning",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-015",
+      "description": "恰长硬切：切片长度恰好等于 chunkSize 且结尾不在允许句读集合（页码容错），page 模式豁免。",
+      "severity": "error",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-016",
+      "description": "chunkId 必须非空且全局唯一。",
+      "severity": "error",
+      "isBaseRule": true
+    },
+    {
+      "ruleId": "CCJ-017",
+      "description": "chunkId 必须等于 {strategy}#{index}；index 必须从 0 起连续且不重复；charCount 必须等于 text 的 Unicode 码位数。",
+      "severity": "error",
+      "isBaseRule": true
+    }
+  ]
+}

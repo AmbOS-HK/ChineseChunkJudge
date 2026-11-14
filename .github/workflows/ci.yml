@@ -20,6 +20,37 @@ jobs:
       - name: Check contract version is identical in rules.md / openapi.yaml / ContractConstants
         run: python3 scripts/check_contract_version.py
 
+  contract-integrity:
+    name: contract integrity (schemas / $ref / consumers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install check dependency
+        run: python -m pip install --quiet pyyaml
+
+      - name: Check schemas, $ref resolution, templates and fixture outputs
+        run: python scripts/check_contract_integrity.py
+
+  contract-bump:
+    name: contract version bump guard
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: git fetch --no-tags origin +refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
+
+      - name: "Guard: contract changes must bump exactly one version segment"
+        run: python3 scripts/check_contract_bump.py --base origin/${{ github.base_ref }}
+
   build-and-test:
     name: build & test (net10.0)
     runs-on: ubuntu-latest

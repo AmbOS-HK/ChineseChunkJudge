@@ -1,0 +1,23 @@
+{
+  "chunkId": "structure@1200#0",
+  "index": 0,
+  "text": "第一条 为了规范管理，制定本规范。",
+  "startOffset": 0,
+  "endOffset": 17,
+  "strategy": "structure@1200",
+  "metadata": {
+    "title": "探针文档",
+    "sourcePath": "docs/probe.md",
+    "documentType": "markdown",
+    "pageInfo": "1",
+    "createTime": "2026-11-14T09:00:00+08:00"
+  },
+  "charCount": 17,
+  "startsAtUnitBoundary": true,
+  "endsAtUnitBoundary": true,
+  "relations": {
+    "previousChunkId": null,
+    "nextChunkId": "structure@1200#1",
+    "parentChunkId": null
+  }
+}
