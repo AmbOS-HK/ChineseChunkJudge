@@ -1,0 +1,25 @@
+{
+  "documentCategories": ["synthetic_note"],
+  "traits": ["weak_structure"],
+  "template": {
+    "templateId": "synthetic-note-v0",
+    "version": "0.1.0",
+    "name": "合成样例模板",
+    "appliesTo": {
+      "documentCategories": ["synthetic_note"]
+    },
+    "decision": {
+      "rules": [
+        {
+          "traits": ["weak_structure"],
+          "chunkMode": "smart",
+          "chunkSize": 400
+        }
+      ],
+      "fallback": {
+        "chunkMode": "smart",
+        "chunkSize": 300
+      }
+    }
+  }
+}

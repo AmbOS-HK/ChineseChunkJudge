@@ -1,0 +1,32 @@
+{
+  "document": {
+    "documentId": "synthetic-cli-001",
+    "metadata": {
+      "title": "合成样例",
+      "sourcePath": "samples/cli/synthetic.md",
+      "documentType": "markdown",
+      "pageInfo": "1",
+      "createTime": "2026-11-14T09:00:00+08:00"
+    },
+    "content": "合成样例正文。仅供命令行自测。",
+    "language": "zh"
+  },
+  "options": {
+    "strategyType": "structure",
+    "targetSize": 400
+  },
+  "rawChunks": [
+    {
+      "index": 0,
+      "text": "合成样例正文。",
+      "startOffset": 0,
+      "endOffset": 7
+    },
+    {
+      "index": 1,
+      "text": "仅供命令行自测。",
+      "startOffset": 7,
+      "endOffset": 15
+    }
+  ]
+}
