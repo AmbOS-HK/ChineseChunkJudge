@@ -3,7 +3,7 @@
 > 交接日期：2026-11-14
 > 仓库：`https://github.com/AmbOS-HK/ChineseChunkJudge.git`
 > 分支：`main`
-> 本文是 Grok Bot 的入口说明；`contract/` 是唯一权威，`docs/` 是规划与审查记录，不具契约效力。
+> 本文是 Grok Bot 的入口说明；`contract/` 是唯一权威，`docs/` 是规划与审查记录，不具契约效力。简明版入口见 `docs/24-交接说明-2026-11-14.md`；两者冲突时，以 `contract/` 与本文的“当前事实”为准。
 
 ## 0. 交接前必做：先确认 GitHub 上是当前状态
 
