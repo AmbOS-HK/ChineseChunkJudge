@@ -24,6 +24,10 @@ public static class ChunkRuleIds
     public const string HardCut = "CCJ-015";
     public const string ChunkIdentity = "CCJ-016";
     public const string ChunkIdentityConsistency = "CCJ-017";
+    public const string StrategyConsistency = "CCJ-018";
+    public const string OversizedAgainstMax = "CCJ-019";
+    public const string MetadataEquality = "CCJ-020";
+    public const string ParentStructure = "CCJ-021";
 }
 
 /// <summary>规则求值上下文。</summary>
@@ -177,7 +181,7 @@ public sealed class EmptyChunkRule : IChunkRule
                     Message = $"切片 {chunk.ChunkId} 正文为空或仅空白。",
                     Detail = new Dictionary<string, string>
                     {
-                        ["charCount"] = "0"
+                        ["charCount"] = ChunkTextMetrics.CountCharacters(chunk.Text).ToString(CultureInfo.InvariantCulture)
                     }
                 };
             }
@@ -628,12 +632,16 @@ public sealed class ChunkRuleEngine
         ChunkRuleIds.ParentAliasConsistency,
         ChunkRuleIds.HardCut,
         ChunkRuleIds.ChunkIdentity,
-        ChunkRuleIds.ChunkIdentityConsistency
+        ChunkRuleIds.ChunkIdentityConsistency,
+        ChunkRuleIds.StrategyConsistency,
+        ChunkRuleIds.OversizedAgainstMax,
+        ChunkRuleIds.MetadataEquality,
+        ChunkRuleIds.ParentStructure
     };
 
     public IReadOnlyList<IChunkRule> Rules => _rules;
 
-    /// <summary>构造契约规定的十七条基础规则。</summary>
+    /// <summary>构造契约规定的二十一条基础规则。</summary>
     public static IReadOnlyList<IChunkRule> CreateDefaultRules() =>
     [
         new MetadataCompletenessRule(),
@@ -652,7 +660,11 @@ public sealed class ChunkRuleEngine
         new ParentAliasConsistencyRule(),
         new HardCutRule(),
         new ChunkIdentityRule(),
-        new ChunkIdentityConsistencyRule()
+        new ChunkIdentityConsistencyRule(),
+        new StrategyConsistencyRule(),
+        new OversizedAgainstMaxRule(),
+        new MetadataEqualityRule(),
+        new ParentStructureRule()
     ];
 
     /// <summary>注册扩展规则。编号必须唯一，扩展规则不得声明为基础规则。</summary>

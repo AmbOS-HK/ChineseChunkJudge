@@ -2,7 +2,7 @@
 
 | 项目 | 值 |
 | --- | --- |
-| 契约版本 | 0.9.0 |
+| 契约版本 | 0.10.0 |
 | 状态 | 生效 |
 | 权威文件 | 本文件 + `contract/openapi.yaml` + `contract/schema/*.json` |
 | 适用范围 | 任意语言、任意实现产出的文本切片结果 |
@@ -68,6 +68,13 @@ DocumentFeature + ChunkStrategyOptions
 - 演示插件桩放在仓库外（当前为 `D:\ChineseChunkJudge.Plugins\StructureExecutorStub`），其存在不改变"本仓库不内置算法"的边界。
 - 插件引用 Core 时不得把 `ChineseChunkJudge.Core.dll` 复制进插件输出目录（C# 侧用 `Private="false"`），避免加载出双份 Core 导致接口类型不匹配。
 
+### 3.2 归一化不判定（0.10.0）
+
+`POST /chunks/normalize` 只做 `RawChunk → ContractChunk` 的字段补齐（元信息快照、字符计数、关系指针），**不做判定**、不产出 `JudgeReport`，因此 **CCJ-013 不适用于本端点**。
+
+- 响应保持既有形态（`ContractChunk[]` 裸数组），**不新增父块回显**；父块集合与配对由 `POST /packages/parent-child` 产出。
+- `parentChild.enabled=false` 且请求携带 `parentChunks` / `pairs` → 由宿主返回 **400 `invalid_request`**（与 CCJ-013 的语义保持一致，但归一化侧不产生报告）。
+
 ## 4. 文档特征 DocumentFeature
 
 | 字段 | JSON 名 | 类型 | 必填 | 说明 |
@@ -118,7 +125,8 @@ strategy = {type}@{targetSize}
 
 - `type`：`^[a-z][a-z0-9_-]*$`，小写字母开头，只含小写字母、数字、下划线、连字符。
 - `targetSize`：正整数，取值 `1..1500`，不允许前导零。
-- 完整校验正则：`^[a-z][a-z0-9_-]*@[1-9][0-9]*$`。
+- 完整校验正则：`^[a-z][a-z0-9_-]*@(?:[1-9]|[1-9][0-9]|[1-9][0-9][0-9]|1[0-4][0-9][0-9]|1500)$`（区间与 §5.1 的 1..1500 同源，可穷举；`@0600`、`@1501`、`@2000` 均不匹配）。
+- 策略名与选项的一致性由 **CCJ-018** 校验（`{type}` = `options.strategyType`、`{targetSize}` = `options.targetSize` 且在 1..1500 内）。
 - 示例：`structure@600`、`sentence@900`、`fixed@300`。
 
 基线参数由 ChunkJudgeBench 产出，本契约不规定各 `type` 的具体切片算法。
@@ -129,7 +137,7 @@ strategy = {type}@{targetSize}
 | --- | --- | --- | --- | --- | --- |
 | 策略类型 | `strategyType` | string | 是 | — | 对应 `{type}` |
 | 目标块长 | `targetSize` | integer | 是 | — | 1..1500 |
-| 单块硬上限 | `maxChunkSize` | integer | 否 | 1500 | 不得大于 1500，即不得放宽上限 |
+| 单块字符告警阈值 | `maxChunkSize` | integer | 否 | 1500 | 告警阈值，不得放宽；切片字符数超过该值且未超 1500 时由 **CCJ-019** 告警 |
 | 单块下限 | `minChunkSize` | integer | 否 | 1 | 1..targetSize |
 | 保留结构 | `preserveStructure` | boolean | 否 | true | 是否按结构单元切分 |
 | 重叠字符数 | `overlap` | integer | 否 | 0 | 0..targetSize-1 |
@@ -213,19 +221,22 @@ strategy = {type}@{targetSize}
 | 字段 | JSON 名 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- | --- |
 | 父块标识 | `parentChunkId` | string | 是 | 全文档唯一，建议 `{strategy}#p{index}` |
-| 序号 | `index` | integer | 是 | 从 0 起连续 |
+| 序号 | `index` | integer | 是 | 从 0 起连续（父块序号，由 **CCJ-021** 校验） |
 | 正文 | `text` | string | 是 | 必须为原文精确子串，不得改写 |
 | 起始偏移 | `startOffset` | integer | 是 | 见第 11 节 |
 | 结束偏移 | `endOffset` | integer | 是 | 开区间 |
 | 策略名 | `strategy` | string | 是 | 符合 5.1 |
 | 元信息 | `metadata` | object | 是 | 五字段快照，与文档一致 |
-| 字符数 | `charCount` | integer | 是 | Unicode 码位数 |
+| 字符数 | `charCount` | integer | 是 | Unicode 码位数（由 **CCJ-021** 校验） |
+| 起始齐边界 | `startsAtUnitBoundary` | boolean | 否 | 默认 true，见下「父块边界」约束 |
+| 结束齐边界 | `endsAtUnitBoundary` | boolean | 否 | 默认 true，见下「父块边界」约束 |
 | 跨父块引用 | `relatedContextParentIds` | array | 否 | 显式 ID 引用，替代文本重叠；ID 必须可解析，禁止自引用与成环 |
 
 约束：
 
 - 上下文父块**互不重叠**，且集合对原文做**完整无重叠划分**（拼接后等价于原文），由 **CCJ-010** 校验；子块不参与该覆盖校验。
 - 父块必须落在完整结构单元边界上（`startsAtUnitBoundary` / `endsAtUnitBoundary` 为 true），不得切在半句或条款中间。
+- 父块本期不携带 `headingPath`（C-17 只作用于子块）。
 - 跨父块引用构成**有向无环图**，检出环路（含自引用）触发 **CCJ-011**（warning，不阻断）。
 
 ### 7.3 父子配对与产物包 ParentChildPackage
@@ -270,7 +281,7 @@ strategy = {type}@{targetSize}
 | `MAX_CHUNK_CHARS` | 1500 | 子块字符数**告警阈值**，任何选项不得放宽；CCJ-004 作用域仅 Child Chunk |
 | `PARENT_MAX_CHARS_DEBUG` | 6000 | 父块长度告警阈值的**临时调试默认值**，非标准基准；正式值由样本 P95 标定，契约不设全局硬封顶 |
 
-### 8.3 基础规则表（CCJ-001..CCJ-017）
+### 8.3 基础规则表（CCJ-001..CCJ-021）
 
 | 编号 | 级别 | 触发条件 | 输出要点 |
 | --- | --- | --- | --- |
@@ -279,7 +290,7 @@ strategy = {type}@{targetSize}
 | CCJ-003 | warning | 切片正文为空或仅空白（含全角空格、制表符、换行） | 报告空切片标识 |
 | CCJ-004 | warning | `charCount > 1500` | 报告实际字符数 |
 | CCJ-005 | error | 偏移越界、`endOffset <= startOffset`、或 `text` 与原文该区间不一致 | 报告区间与差异类型 |
-| CCJ-006 | warning | 相邻切片区间重叠（前一块 `endOffset` > 后一块 `startOffset`） | 报告相邻切片对 |
+| CCJ-006 | warning | 相邻切片区间重叠（前一块 `endOffset` > 后一块 `startOffset`） | 报告相邻切片对。注：`overlap > 0` 时的相邻重叠属**预期告警**，仍按 warning 报出；`summary` 不另设重叠计数字段 |
 | CCJ-007 | error | 选项非法：`targetSize` 越界、`maxChunkSize > 1500`、`maxChunkSize < targetSize`、`minChunkSize` 越界、`overlap` 越界、`parentMaxChars` 非正整数、`chunkMode` 非法枚举 | 逐项报告非法参数 |
 | CCJ-008 | error | 配对结构不完整：`childChunkIds` 为空或数组内重复、ID 无法解析、父子两侧不一致、一个子块归属多个上下文父块、父块 ID 重复、子块 ID 重复、同一父块存在多条配对、跨父块引用 ID 无法解析 | 报告父块标识与问题类型 |
 | CCJ-009 | warning | 上下文父块 `charCount > parentMaxChars` | 报告实际字符数与阈值，与 CCJ-004 分开计数 |
@@ -291,10 +302,15 @@ strategy = {type}@{targetSize}
 | CCJ-015 | error | 恰长硬切：`charCount` 恰好等于 `chunkSize` 且结尾不在允许句读集合（页码容错）；`page` 模式豁免，父块不适用 | 报告子块标识、长度与结尾片段 |
 | CCJ-016 | error | 切片标识非法：`chunkId` 为空、纯空白或重复；单库与双库一律执行 | 报告 `chunkId` 与出现次数 |
 | CCJ-017 | error | 切片标识、序号与计数不一致：`chunkId` 不等于 `{strategy}#{index}`；`index` 不是从 0 起连续（含重复）；`charCount` 不等于 `text` 的 Unicode 码位数。只作用于 Child Chunk | 报告字段、期望值与实际值 |
+| CCJ-018 | error | 策略名与选项不一致：子块 `strategy` 的 `{type}` ≠ `options.strategyType`；或 `{targetSize}` ∉ `1..1500`；或 `{targetSize}` ≠ `options.targetSize`。**前置**：仅在该块 `strategy` 通过 CCJ-002（正则匹配成功）后执行，避免同一块报两条 | 报告期望值与实际值 |
+| CCJ-019 | warning | 切片字符数超 `maxChunkSize`：`options.maxChunkSize < 1500` **且** `charCount > options.maxChunkSize` **且** `charCount <= 1500`。`maxChunkSize = 1500` 时本规则不触发；`charCount > 1500` 由 CCJ-004 独占，不双计 | 报告实际字符数与配置阈值 |
+| CCJ-020 | error | 元信息与文档不等值：子块或父块 `metadata` 五字段与 `document.metadata` 不一致（`createTime` 按 ISO 8601 解析后比较时刻，解析失败按逐字比较） | 逐字段报告差异 |
+| CCJ-021 | error | 父块结构完整性：`index` 非 `0..N-1` 连续（含重复、缺号）；`charCount` ≠ `text` 的 Unicode 码位数；`startOffset` / `endOffset` 越界或 `endOffset <= startOffset`。只作用于 ContextParentChunk | 报告字段、期望值与实际值 |
 
 ### 8.4 基础规则的不可变性
 
-- CCJ-001..CCJ-017 全部为**基础规则**：不可删除、不可改编号、不可降级级别、不可改变判定条件。
+- CCJ-001..CCJ-021 全部为**基础规则**：不可删除、不可改编号、不可降级级别、不可改变判定条件。
+- **规则作用域不重叠**：CCJ-018 只在 CCJ-002 通过后执行；CCJ-019 的 `charCount <= 1500` 排除区使其与 CCJ-004 互斥；CCJ-005 只遍历子块，CCJ-021 只校验父块，两者不双计；CCJ-021 承担父块的偏移与计数校验，**CCJ-010 仍只做**「区间重叠 / 非精确子串 / 拼接不等价」三项。
 - 实现可以提供「扩展规则」新增校验，但**不得删除基础校验**，也不得用扩展规则豁免基础规则判出的问题。
 - 基础规则可以按需关闭输出级别（如将 warning 降为 info）仅限实现内部展示层，不得改变 `JudgeReport` 中的契约语义。
 - **长度校验作用域**：CCJ-004 作用域为 **Child Chunk**（阈值 1500，不可豁免）；上下文父块由 **CCJ-009** 独立约束（阈值 `parentMaxChars`，仅告警）。这是**规则作用域拆分**，不是对 CCJ-004 的豁免。
@@ -330,6 +346,7 @@ strategy = {type}@{targetSize}
 | 摘要 | `summary` | object | 是 | 见 9.1 |
 | 问题清单 | `issues` | array | 是 | 见 9.2，可为空数组 |
 | 生效规则 | `appliedRules` | array | 是 | 见 9.3 |
+| 生效选项 | `effectiveOptions` | object | 否 | 判定所依据的 `ChunkStrategyOptions` 原样回显（直接复用 5.2 定义，不复制字段）；用于复核 `targetSize` / `maxChunkSize` 等影响结论的取值 |
 
 ### 9.1 summary
 
@@ -339,14 +356,14 @@ strategy = {type}@{targetSize}
 | `totalCharCount` | integer | 字符数合计 |
 | `minCharCount` | integer | 最短切片字符数，无切片时为 0 |
 | `maxCharCount` | integer | 最长切片字符数，无切片时为 0 |
-| `averageCharCount` | integer | 平均字符数，四舍五入取整 |
+| `averageCharCount` | integer | 平均字符数，四舍五入取整（half-up，即 `AwayFromZero`） |
 | `emptyChunkCount` | integer | 空切片数量 |
 | `oversizedChunkCount` | integer | 超过 1500 字符的切片数量 |
 | `parentChunkCount` | integer | 上下文父块总数，无双库产物时为 0 |
 | `childWithParentCount` | integer | 绑定到上下文父块的子块数量 |
 | `parentCoverageRatio` | number | **deprecated**，1.0.0 移除；语义等同 `childWithParentRatio`，实为子块归属比例，命名易误读为父块文本覆盖率 |
 | `childWithParentRatio` | number | `childWithParentCount` / 子块总数；无子块时为 0。0.4.0 起为正式字段 |
-| `parentCharP95` | integer | 上下文父块字符长度 P95（四舍五入取整），无父块时为 0 |
+| `parentCharP95` | integer | 上下文父块字符长度 P95，用**最近秩法**：将长度升序排序后取第 `ceil(0.95*N)-1` 个元素（0 基下标），N=0 时为 0 |
 | `oversizedParentChunkCount` | integer | 超过 `parentMaxChars` 的父块数量，与 `oversizedChunkCount` 独立累加 |
 | `hardCutChunkCount` | integer | 恰长硬切子块数量（CCJ-015），验收口径为每文档必须为 0 |
 
@@ -419,7 +436,7 @@ strategy = {type}@{targetSize}
 | `templateId` | string | 是 | `^[a-z][a-z0-9_-]*$` |
 | `version` | string | 是 | 模板自身版本，与契约版本独立 |
 | `name` | string | 是 | 展示名 |
-| `appliesTo` | object | 是 | `documentCategories: string[]` + `traits: enum[]` |
+| `appliesTo` | object | 是 | `documentCategories: string[]`（必填）+ `traits: enum[]`（**可选**，仅供人读，**不参与准入**） |
 | `decision` | object | 是 | 见 13.2 |
 | `validation` | object | 否 | `hardCutZero: boolean = true`；`acceptanceRef: string` 可选（回归执行归 Bench） |
 
@@ -427,9 +444,10 @@ strategy = {type}@{targetSize}
 
 ### 13.2 决策表
 
-- `decision.rules`：有序数组，**先匹配先生效**；每条 = `{ traits, chunkMode, pattern?, chunkSize, parentChild? }`，`traits` 全部满足才命中。
+- `decision.rules`：有序数组，**先匹配先生效**；每条 = `{ traits, chunkMode, pattern?, chunkSize, parentChild?, strategyType?, forbidLineStartAnchor?, forbidHeadingSplit?, preserveSeparator? }`，`traits` 全部满足才命中。
 - `decision.fallback`：**必填兜底**，`chunkMode=smart` 且 `chunkSize` 必填；未命中任何规则时必须落 fallback，不允许无决策结果。
-- `chunkMode` ∈ `regex` / `smart` / `page`；`regex` 时 `pattern` 必填，其余模式禁止携带 `pattern`。
+- `chunkMode` ∈ `regex` / `smart` / `page`；`regex` 时 `pattern` 必填（`minLength 1`），其余模式禁止携带 `pattern`——由 Schema `if/then/else` 机器约束，不靠人读。
+- `pattern` 的**单一来源**是模板与选型响应（`TemplateDecision.pattern`）；决策结果中的 `pattern` **不回填 `options`**，执行器需要时由宿主从选型响应取。
 - 正则禁忌用枚举字段：`forbidLineStartAnchor: boolean = true`（禁 `^` 多行锚）、`forbidHeadingSplit: boolean = true`（禁 h3 标题切分）、`preserveSeparator: boolean = true`（保留分隔符）。
 - `chunkSize`：integer，1..1500；`smart` 为软上限。
 - `parentChild` 引用 §5.3 配置，不复制字段。
@@ -445,11 +463,54 @@ strategy = {type}@{targetSize}
 
 约束：
 
-1. `template` 与 `templates` **恰好提供一个**；同时提供或都不提供返回 400。
+1. `template` 与 `templates` **恰好提供一个**；同时提供或都不提供返回 400。该约束由 Schema `oneOf` 机器约束（见 `openapi.yaml` `TemplateResolveRequest`）。
 2. `templates` 必须非空。
-3. 类别过滤：保留 `appliesTo.documentCategories` 与请求 `documentCategories` 有交集的模板；`appliesTo.documentCategories` 为空数组**不视为通配**。
+3. 类别过滤：保留 `appliesTo.documentCategories` 与请求 `documentCategories` 有交集的模板；`appliesTo.documentCategories` 为空数组**不视为通配**。`appliesTo.traits` **不参与准入**，仅供人读；模板与请求两侧的 `traits` 只用于 `decision.rules` 匹配。
 4. 优先级：候选按请求数组顺序，顺序即优先级，不引入 `priority` 字段。
 5. 择优：存在「规则命中」的候选时，取顺序最前命中者（`selectionReason=rule_matched`）；全部未命中时，取顺序最前候选的 `fallback`（`selectionReason=fallback`）。不得采用「首个候选无论是否命中都兜底」。
 6. 类别过滤后为空：返回 400，错误码 `no_applicable_template`。
 7. 响应字段：`templateId` 为**实际选中**的模板；新增 `candidateCount`（类别过滤后候选数）与 `selectionReason`（`rule_matched` / `fallback`）。
 8. 单模板形态行为与 0.7.1 一致，`candidateCount` 固定为 1。
+
+#### 13.3.1 决策结果 → `ChunkStrategyOptions` 映射（0.10.0）
+
+选型结果只承载决策，落到执行需要按下表转换成选项：
+
+| options 字段 | 来源 | 缺省 |
+| --- | --- | --- |
+| `strategyType` | `decision.strategyType` | `regex`→`regex`、`page`→`page`、`smart`→`smart` |
+| `targetSize` | `decision.chunkSize` | 无缺省，必填 |
+| `chunkMode` | `decision.chunkMode` | 无缺省 |
+| `pattern` | `decision.pattern`（仅 regex） | 无；且**不回填 options** |
+| `parentChild` | `decision.parentChild` | 不启用 |
+| `strategy` | `{strategyType}@{targetSize}` | 由上式拼出 |
+
+`page` 模式的 `chunkSize` 语义：**期望页长**。按页边界切，单块可短于或长于该值；CCJ-015 豁免不变；超过 1500 仍由 CCJ-004 告警。
+
+`smart` → `smart` 是**策略名直映**（不推断算法族），`chunkMode` 与 `strategyType` 因此一一对应。
+
+## 13.4 HTTP 契约摘要（0.10.0）
+
+本节只给端点清单、请求必填与错误码登记表；**字段细节以 `contract/openapi.yaml` 为准，本节不复制字段定义**。
+
+| 端点 | 请求必填 | 成功响应 |
+| --- | --- | --- |
+| `GET /rules` | — | `RuleManifest` |
+| `POST /chunks/normalize` | `document`、`options`、`rawChunks` | `ContractChunk[]`（裸数组） |
+| `POST /judge` | `document`、`options`、`rawChunks` | `JudgeReport` |
+| `POST /judge/contract-chunks`（0.10.0） | `document`、`options`、`chunks` | `JudgeReport` |
+| `POST /templates/resolve` | `documentCategories`、`traits`，且 `template` / `templates` 恰好一个 | `TemplateDecision` |
+| `POST /packages/parent-child` | `document`、`options`、`chunks` | `ParentChildPackage` |
+| `POST /judge/execute` | `document`、`options`、`executor` | `JudgeReport` |
+
+**错误码登记表（封闭枚举，新增码需升版）**：
+
+| 码 | HTTP | 场景 |
+| --- | --- | --- |
+| `invalid_request` | 400 | 请求体结构或必填缺失 |
+| `invalid_options` | 400 | 选项非法（与 CCJ-007 同源） |
+| `invalid_chunk` | 400 | 切片结构不合法，无法进入判定 |
+| `no_applicable_template` | 400 | 类别过滤后无候选（§13.3 第 6 条） |
+| `executor_not_registered` | 404 | `/judge/execute` 未注册执行器 |
+
+资源边界（请求体大小、切片数量上限等）本期**不写入契约**：本仓无 HTTP 宿主，写了也无法执行与验证，待宿主落地时另起 MINOR 定义。

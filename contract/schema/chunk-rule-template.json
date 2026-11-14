@@ -40,6 +40,10 @@
       "additionalProperties": false,
       "required": ["rules", "fallback"],
       "properties": {
+        "strategyType": {
+          "$ref": "#/$defs/strategyType",
+          "description": "可选：模板级缺省策略类型，规则与兜底未声明时取此值。"
+        },
         "rules": {
           "type": "array",
           "description": "有序，先匹配先生效；traits 全部满足才命中。",
@@ -74,19 +78,36 @@
       "type": "string",
       "enum": ["regex", "smart", "page"]
     },
+    "strategyType": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "可选：执行策略类型。映射见 rules.md §13.3.1（regex→regex、page→page、smart→smart）。"
+    },
     "decisionRule": {
       "type": "object",
       "additionalProperties": false,
       "required": ["traits", "chunkMode", "chunkSize"],
+      "if": {
+        "properties": { "chunkMode": { "const": "regex" } },
+        "required": ["chunkMode"]
+      },
+      "then": {
+        "required": ["pattern"],
+        "properties": { "pattern": { "type": "string", "minLength": 1 } }
+      },
+      "else": {
+        "not": { "required": ["pattern"] }
+      },
       "properties": {
         "traits": {
           "type": "array",
           "items": { "$ref": "#/$defs/trait" }
         },
         "chunkMode": { "$ref": "#/$defs/chunkMode" },
+        "strategyType": { "$ref": "#/$defs/strategyType" },
         "pattern": {
           "type": "string",
-          "description": "chunkMode=regex 时必填，其余模式禁止携带。"
+          "description": "chunkMode=regex 时必填（minLength 1），其余模式禁止携带；由本节点的 if/then/else 机器约束。"
         },
         "chunkSize": {
           "type": "integer",
@@ -123,6 +144,7 @@
           "type": "string",
           "const": "smart"
         },
+        "strategyType": { "$ref": "#/$defs/strategyType" },
         "chunkSize": {
           "type": "integer",
           "minimum": 1,

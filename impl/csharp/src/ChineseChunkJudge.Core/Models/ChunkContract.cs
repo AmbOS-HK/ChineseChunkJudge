@@ -15,7 +15,7 @@ public static class ContractConstants
     public const string StrategyNamePattern = @"^[a-z][a-z0-9_-]*@[1-9][0-9]*$";
 
     /// <summary>契约版本号，与 contract/rules.md 表头一致。</summary>
-    public const string ContractVersion = "0.9.0";
+    public const string ContractVersion = "0.10.0";
 
     /// <summary>父块长度告警阈值的临时调试默认值，非标准基准；正式值由样本 P95 标定。</summary>
     public const int ParentMaxCharsDebugDefault = 6000;
@@ -159,17 +159,22 @@ public sealed record RawChunk
 /// <summary>契约切片的关系指针。</summary>
 public sealed record ChunkRelations
 {
+    /// <summary>按 index 顺序的前一个切片；首块为 null，但字段必须出现（Schema required）。</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public string? PreviousChunkId { get; init; }
 
+    /// <summary>按 index 顺序的后一个切片；末块为 null，但字段必须出现（Schema required）。</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public string? NextChunkId { get; init; }
 
-    /// <summary>deprecated，1.0.0 移除；语义等同 StructuralParentChunkId，二者同现值必须一致（CCJ-014）。</summary>
+    /// <summary>deprecated，1.0.0 移除；语义等同 StructuralParentChunkId，二者同现值必须一致（CCJ-014）。字段为 Schema required，null 也必须出现。</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public string? ParentChunkId { get; init; }
 
-    /// <summary>结构父：文档大纲层级的最近前序 heading 父块。</summary>
+    /// <summary>结构父：文档大纲层级的最近前序 heading 父块。Schema 未列入 required，null 时省略。</summary>
     public string? StructuralParentChunkId { get; init; }
 
-    /// <summary>上下文父：双库模式下归属的 contextParent；双库关闭时不得出现（CCJ-013）。</summary>
+    /// <summary>上下文父：双库模式下归属的 contextParent；双库关闭时不得出现（CCJ-013），null 时省略。</summary>
     public string? ContextParentChunkId { get; init; }
 }
 
@@ -298,6 +303,9 @@ public sealed record JudgeReport
     public required IReadOnlyList<ChunkIssue> Issues { get; init; }
 
     public required IReadOnlyList<AppliedRule> AppliedRules { get; init; }
+
+    /// <summary>判定所依据的选项原样回显（可选），对应契约 §9 的 effectiveOptions。</summary>
+    public ChunkStrategyOptions? EffectiveOptions { get; init; }
 }
 
 /// <summary>字符计量工具：统一按 Unicode 码位计数，与契约第 11 节一致。</summary>

@@ -15,7 +15,7 @@ public sealed class HardCutRule : IChunkRule
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex PageNumberEnding = new(
-        @"[。！？；…\.!\?;][”’）】》]?\s*\d{1,4}$",
+        @"[。！？；…\.!\?;]\s*\d{1,4}$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public string RuleId => ChunkRuleIds.HardCut;

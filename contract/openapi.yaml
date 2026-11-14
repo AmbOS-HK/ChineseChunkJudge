@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ChineseChunkJudge Adjudication API
-  version: 0.9.0
+  version: 0.10.0
   description: >-
     切片判定服务的 HTTP 契约。请求与响应结构引用 contract/schema 下的 JSON Schema，
     与 contract/rules.md 同属权威标准。参考实现为进程内库，本契约用于跨语言一致性验证。
@@ -65,6 +65,26 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/JudgeRequest'
+      responses:
+        '200':
+          description: 判定报告
+          content:
+            application/json:
+              schema:
+                $ref: './schema/judge-report.json'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /judge/contract-chunks:
+    post:
+      tags: [judge]
+      operationId: judgeContractChunks
+      summary: 对调用方已构造好的契约切片执行判定（不重新归一化）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JudgeContractChunksRequest'
       responses:
         '200':
           description: 判定报告
@@ -164,7 +184,7 @@ components:
             $ref: './schema/raw-chunk.json'
         parentChunks:
           type: array
-          description: 可选，双库上下文父块；parentChild.enabled=false 时不得携带（CCJ-013）。
+          description: 可选，双库上下文父块；parentChild.enabled=false 时不得携带，携带返回 400 invalid_request（rules.md §3.2）。
           items:
             $ref: './schema/parent-child-package.json#/$defs/contextParentChunk'
         pairs:
@@ -192,10 +212,36 @@ components:
           type: array
           items:
             $ref: './schema/parent-child-package.json#/$defs/contextParentChildPair'
+    JudgeContractChunksRequest:
+      type: object
+      additionalProperties: false
+      required: [document, options, chunks]
+      properties:
+        document:
+          $ref: './schema/document-feature.json'
+        options:
+          $ref: './schema/chunk-strategy-options.json'
+        chunks:
+          type: array
+          items:
+            $ref: './schema/contract-chunk.json'
+        parentChunks:
+          type: array
+          items:
+            $ref: './schema/parent-child-package.json#/$defs/contextParentChunk'
+        pairs:
+          type: array
+          items:
+            $ref: './schema/parent-child-package.json#/$defs/contextParentChildPair'
     TemplateResolveRequest:
       type: object
       additionalProperties: false
       required: [documentCategories, traits]
+      oneOf:
+        - required: [template]
+          not: { required: [templates] }
+        - required: [templates]
+          not: { required: [template] }
       properties:
         template:
           $ref: './schema/chunk-rule-template.json'
@@ -211,6 +257,7 @@ components:
           type: array
           items:
             type: string
+            minLength: 1
         traits:
           type: array
           items:
@@ -219,6 +266,16 @@ components:
       type: object
       additionalProperties: false
       required: [templateId, chunkMode, chunkSize, usedFallback, candidateCount, selectionReason]
+      if:
+        properties: { usedFallback: { const: true } }
+      then:
+        properties:
+          selectionReason: { const: fallback }
+        not: { required: [matchedRuleIndex] }
+      else:
+        properties:
+          selectionReason: { const: rule_matched }
+        required: [matchedRuleIndex]
       properties:
         templateId:
           type: string
@@ -238,6 +295,8 @@ components:
           enum: [rule_matched, fallback]
         chunkMode:
           $ref: './schema/chunk-rule-template.json#/$defs/chunkMode'
+        strategyType:
+          $ref: './schema/chunk-rule-template.json#/$defs/strategyType'
         pattern:
           type: string
         chunkSize:
@@ -286,6 +345,7 @@ components:
       properties:
         contractVersion:
           type: string
+          pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$'
         rules:
           type: array
           items:
@@ -317,7 +377,8 @@ components:
           properties:
             code:
               type: string
-              examples: [invalid_options]
+              enum: [invalid_request, invalid_options, invalid_chunk, no_applicable_template, executor_not_registered]
+              description: 封闭枚举，新增码需升版（见 rules.md §13.4）。
             message:
               type: string
             detail:

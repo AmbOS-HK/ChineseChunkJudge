@@ -307,6 +307,31 @@ public sealed class ParentChildRulesTests
     }
 
     [Fact]
+    public void DuplicateChildChunkId_Fails_CCJ008_And_CCJ016()
+    {
+        var content = "第一段。第二段。";
+        var document = CreateDocument(content);
+        var chunks = new List<ContractChunk>
+        {
+            CreateChunk(0, "第一段。", 0, "structure@600#p0"),
+            CreateChunk(1, "第二段。", 4, "structure@600#p0") with { ChunkId = "structure@600#0" }
+        };
+        var parents = new List<ContextParentChunk>
+        {
+            CreateParent(0, content, 0)
+        };
+        var pairs = new List<ContextParentChildPair>
+        {
+            new() { ContextParentChunkId = "structure@600#p0", ChildChunkIds = ["structure@600#0"] }
+        };
+
+        var result = new ChunkValidator().Validate(document, chunks, EnabledOptions(), parents, pairs);
+
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ParentChildPairStructure && i.ChunkId == "structure@600#0");
+        Assert.Contains(result.Issues, i => i.RuleId == ChunkRuleIds.ChunkIdentity);
+    }
+
+    [Fact]
     public void DanglingRelatedParent_Fails_CCJ008()
     {
         var document = CreateDocument(SampleContent);

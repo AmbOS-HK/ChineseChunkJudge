@@ -42,6 +42,18 @@ public sealed class ChunkValidatorTests
     }
 
     [Fact]
+    public void EmptyChunk_DetailCharCount_UsesActualCodePointCount()
+    {
+        var document = CreateDocument("   ");
+        var chunk = CreateChunk(0, "   ", 0);
+
+        var result = new ChunkValidator().Validate(document, new[] { chunk });
+
+        var issue = Assert.Single(result.Issues, i => i.RuleId == ChunkRuleIds.EmptyChunk);
+        Assert.Equal("3", issue.Detail!["charCount"]);
+    }
+
+    [Fact]
     public void OversizedChunk_ReportsWarning_CCJ004()
     {
         var content = new string('文', 1600);
@@ -302,7 +314,7 @@ public sealed class ChunkValidatorTests
         Assert.Equal("structure@600", report.Strategy);
         Assert.Equal(2, report.Summary.ChunkCount);
         Assert.Equal(12, report.Summary.TotalCharCount);
-        Assert.Equal(17, report.AppliedRules.Count);
+        Assert.Equal(21, report.AppliedRules.Count);
     }
 
     [Fact]

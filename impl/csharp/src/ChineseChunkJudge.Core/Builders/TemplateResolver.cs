@@ -10,6 +10,15 @@ namespace ChineseChunkJudge.Core.Builders;
 /// </summary>
 public sealed class TemplateResolver
 {
+    private static readonly HashSet<string> ClosedTraits = new(StringComparer.Ordinal)
+    {
+        ChunkTraits.ArticleNumbering,
+        ChunkTraits.SectionNumbering,
+        ChunkTraits.WeakStructure,
+        ChunkTraits.DenseTable,
+        ChunkTraits.PdfNoStructure
+    };
+
     /// <summary>单模板选型（兼容形态，appliesTo 不参与准入）。</summary>
     public TemplateDecision Resolve(
         ChunkRuleTemplate template,
@@ -158,6 +167,7 @@ public sealed class TemplateResolver
         }
 
         ValidateFallback(template);
+        ValidateClosedTraits(template.AppliesTo.Traits, "appliesTo.traits");
 
         for (int i = 0; i < template.Decision.Rules.Count; i++)
         {
@@ -177,6 +187,8 @@ public sealed class TemplateResolver
 
     private static void ValidateRule(DecisionRule rule, int index)
     {
+        ValidateClosedTraits(rule.Traits, $"decision.rules[{index}].traits");
+
         bool isRegex = string.Equals(rule.ChunkMode, ChunkModes.Regex, StringComparison.Ordinal);
 
         if (!isRegex
@@ -207,6 +219,18 @@ public sealed class TemplateResolver
         else if (rule.Pattern is not null)
         {
             throw new ArgumentException($"decision.rules[{index}]：非 regex 模式禁止携带 pattern。");
+        }
+    }
+
+    private static void ValidateClosedTraits(IReadOnlyList<string> traits, string location)
+    {
+        for (int i = 0; i < traits.Count; i++)
+        {
+            string trait = traits[i];
+            if (!ClosedTraits.Contains(trait))
+            {
+                throw new ArgumentException($"{location}[{i}] 的取值「{trait}」不在 traits 封闭枚举内。");
+            }
         }
     }
 

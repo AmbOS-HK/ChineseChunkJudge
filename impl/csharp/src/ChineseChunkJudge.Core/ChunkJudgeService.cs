@@ -26,6 +26,26 @@ public sealed class ChunkJudgeService
 
     public ChunkRuleEngine RuleEngine => _validator.RuleEngine;
 
+    /// <summary>
+    /// 组装规则清单。contractVersion 取契约常量；rules 为引擎当前全部生效规则，含 Register 进来的扩展规则。
+    /// </summary>
+    public RuleManifest GetRuleManifest()
+    {
+        return new RuleManifest
+        {
+            ContractVersion = ContractConstants.ContractVersion,
+            Rules = RuleEngine.Rules
+                .Select(rule => new RuleDescriptor
+                {
+                    RuleId = rule.RuleId,
+                    Description = rule.Description,
+                    Severity = rule.Severity,
+                    IsBaseRule = rule.IsBaseRule
+                })
+                .ToArray()
+        };
+    }
+
     /// <summary>契约切片标识：{strategy}#{index}。</summary>
     public static string BuildChunkId(string strategy, int index) =>
         string.Create(CultureInfo.InvariantCulture, $"{strategy}#{index}");
@@ -227,7 +247,8 @@ public sealed class ChunkJudgeService
             Passed = validation.Passed,
             Summary = Summarize(chunks, parents, options),
             Issues = validation.Issues,
-            AppliedRules = appliedRules
+            AppliedRules = appliedRules,
+            EffectiveOptions = options
         };
     }
 

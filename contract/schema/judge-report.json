@@ -27,7 +27,7 @@
     },
     "strategy": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9_-]*@[1-9][0-9]*$"
+      "pattern": "^[a-z][a-z0-9_-]*@(?:[1-9]|[1-9][0-9]|[1-9][0-9][0-9]|1[0-4][0-9][0-9]|1500)$"
     },
     "targetSize": {
       "type": "integer",
@@ -56,6 +56,10 @@
       "items": {
         "$ref": "#/$defs/appliedRule"
       }
+    },
+    "effectiveOptions": {
+      "$ref": "./chunk-strategy-options.json",
+      "description": "判定所依据的 ChunkStrategyOptions 原样回显（可选），用于复核 targetSize / maxChunkSize 等影响结论的取值。"
     }
   },
   "$defs": {

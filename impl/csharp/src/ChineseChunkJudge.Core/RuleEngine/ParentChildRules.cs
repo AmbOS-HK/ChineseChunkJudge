@@ -170,7 +170,7 @@ public sealed class ParentChildPairStructureRule : IChunkRule
 {
     public string RuleId => ChunkRuleIds.ParentChildPairStructure;
 
-    public string Description => "childChunkIds 非空、配对 ID 可解析、父子两侧一致、每个子块仅归属一个上下文父块，父块 ID 唯一且跨父块引用可解析。";
+    public string Description => "childChunkIds 非空、配对 ID 可解析、父子两侧一致、每个子块仅归属一个上下文父块，父块 ID 与子块 ID 均唯一，且跨父块引用可解析。";
 
     public ChunkIssueSeverity Severity => ChunkIssueSeverity.Error;
 
@@ -197,6 +197,11 @@ public sealed class ParentChildPairStructureRule : IChunkRule
         foreach (var group in context.ParentChunks.GroupBy(p => p.ParentChunkId, StringComparer.Ordinal).Where(g => g.Count() > 1))
         {
             yield return Issue(group.Key, $"父块 ID {group.Key} 重复出现 {group.Count()} 次，父块标识必须唯一。");
+        }
+
+        foreach (var group in context.Chunks.GroupBy(c => c.ChunkId, StringComparer.Ordinal).Where(g => g.Count() > 1))
+        {
+            yield return Issue(group.Key, $"子块 ID {group.Key} 重复出现 {group.Count()} 次，子块标识必须唯一。");
         }
 
         foreach (var parent in context.ParentChunks)
@@ -333,7 +338,7 @@ public sealed class ParentCoverageRule : IChunkRule
         {
             if (parent.StartOffset < 0 || parent.EndOffset <= parent.StartOffset || parent.EndOffset > content.Length)
             {
-                yield return Issue(parent.ParentChunkId, $"父块 {parent.ParentChunkId} 偏移区间 [{parent.StartOffset}, {parent.EndOffset}) 越界或长度非正。");
+                // 区间合法性由 CCJ-021 独立报告；CCJ-010 只做重叠 / 精确子串 / 拼接等价三项。
                 continue;
             }
 

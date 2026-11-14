@@ -247,6 +247,19 @@ public sealed class RuleTemplateAndHardCutTests
     }
 
     [Fact]
+    public void ClosingMarkBetweenPunctuationAndDigits_IsHardCut()
+    {
+        Assert.True(HardCutRule.IsHardCut("甲乙丙丁戊。】123", 10));
+    }
+
+    [Fact]
+    public void PageNumberAfterPunctuation_IsToleratedWithOrWithoutSpace()
+    {
+        Assert.False(HardCutRule.IsHardCut("甲乙丙丁戊。 123", 10));
+        Assert.False(HardCutRule.IsHardCut("甲乙丙丁戊。123", 9));
+    }
+
+    [Fact]
     public void PageMode_IsExempt()
     {
         string text = new string('文', 1196) + "不得大于";
@@ -391,6 +404,87 @@ public sealed class RuleTemplateAndHardCutTests
 
         Assert.Throws<ArgumentException>(() =>
             new TemplateResolver().Resolve(invalid, ["law"], [ChunkTraits.ArticleNumbering]));
+    }
+
+    [Fact]
+    public void Resolve_UnknownRuleTrait_Throws()
+    {
+        var template = CreateTemplate();
+        var invalid = template with
+        {
+            Decision = template.Decision with
+            {
+                Rules = [template.Decision.Rules[0] with { Traits = ["not_a_trait"] }, template.Decision.Rules[1]]
+            }
+        };
+
+        var ex = Assert.Throws<ArgumentException>(() =>
+            new TemplateResolver().Resolve(invalid, ["law"], [ChunkTraits.ArticleNumbering]));
+
+        Assert.Contains("not_a_trait", ex.Message);
+        Assert.Contains("decision.rules[0].traits", ex.Message);
+    }
+
+    [Fact]
+    public void Resolve_UnknownAppliesToTrait_Throws()
+    {
+        var template = CreateTemplate();
+        var invalid = template with
+        {
+            AppliesTo = template.AppliesTo with { Traits = ["not_a_trait"] }
+        };
+
+        var ex = Assert.Throws<ArgumentException>(() =>
+            new TemplateResolver().Resolve(invalid, ["law"], [ChunkTraits.ArticleNumbering]));
+
+        Assert.Contains("not_a_trait", ex.Message);
+        Assert.Contains("appliesTo.traits", ex.Message);
+    }
+
+    [Fact]
+    public void Resolve_EachClosedTrait_Succeeds()
+    {
+        string[] legal =
+        [
+            ChunkTraits.ArticleNumbering,
+            ChunkTraits.SectionNumbering,
+            ChunkTraits.WeakStructure,
+            ChunkTraits.DenseTable,
+            ChunkTraits.PdfNoStructure
+        ];
+
+        foreach (string trait in legal)
+        {
+            var template = new ChunkRuleTemplate
+            {
+                TemplateId = "trait-ok",
+                Version = "1.0.0",
+                Name = "合法特征模板",
+                AppliesTo = new TemplateAppliesTo
+                {
+                    DocumentCategories = ["law"],
+                    Traits = [trait]
+                },
+                Decision = new DecisionTable
+                {
+                    Rules =
+                    [
+                        new DecisionRule
+                        {
+                            Traits = [trait],
+                            ChunkMode = ChunkModes.Smart,
+                            ChunkSize = 800
+                        }
+                    ],
+                    Fallback = new FallbackRule { ChunkMode = ChunkModes.Smart, ChunkSize = 600 }
+                }
+            };
+
+            var decision = new TemplateResolver().Resolve(template, ["law"], [trait]);
+
+            Assert.False(decision.UsedFallback);
+            Assert.Equal(ChunkModes.Smart, decision.ChunkMode);
+        }
     }
 
     [Fact]
