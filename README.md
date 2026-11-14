@@ -14,6 +14,7 @@
 ```
 ChineseChunkJudge/
 ├─ README.md
+├─ HANDOFF.md                        # 交接给 Grok Bot 的入口说明（含当前状态与任务顺序）
 ├─ LICENSE
 ├─ .gitignore
 ├─ .gitattributes                     # 文本入库统一 LF
