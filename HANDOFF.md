@@ -35,9 +35,9 @@ git -C "D:\ChineseChunkJudge" status --porcelain                   # 为空表�
 
 | 项 | 状态 |
 | --- | --- |
-| 契约版本 | **0.10.0**，三处同值：`contract/rules.md` 表头、`contract/openapi.yaml` `info.version`、C# `ContractConstants.ContractVersion` |
+| 契约版本 | **0.10.1**（K-15 PATCH），三处同值：`contract/rules.md` 表头、`contract/openapi.yaml` `info.version`、C# `ContractConstants.ContractVersion` |
 | 基础规则 | **CCJ-001..CCJ-021**，默认注册 **21 条** |
-| C# 参考实现 | `impl/csharp`，`net10.0`；`dotnet test` **101/101**，build 0 警告 0 错误 |
+| C# 参考实现 | `impl/csharp`，`net10.0`；`dotnet test` **104/104**，build 0 警告 0 错误 |
 | 契约门禁 | `check_contract_version.py` PASS；`check_contract_integrity.py` PASS；`check_contract_bump.py --self-test` 9/9 |
 | CI | `.github/workflows/ci.yml`：版本 / 结构 / 升版守门 + build + test |
 | 模板 | `templates/recommended` 6 份 `*-starter`，均 `0.1.0`、未标定、不得自动加载。同目录另有首稿 `aec-law-v1.json`、`aec-plans-v1.json`（判定单 V1.0 的机器可读草案，`0.1.0`，非冻结默认；小循环未在本仓实施；不得自动加载） |
@@ -91,7 +91,7 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 
 ### 4.3 契约遗留
 
-- **K-15 已关闭（0.10.1）**：`chunkMode` / `unitKind` / `severity` 已抽单一 `$defs`，`RuleDescriptor` 与 `appliedRule` 已合并；纯结构收敛。证据见 `docs/16` §6。
+- **K-15 已关闭（0.10.1）**：`chunkMode` / `unitKind` / `severity` 已抽单一 `$defs`，`RuleDescriptor` 与 `appliedRule` 已合并；纯结构收敛。证据见 `docs/15` §6、`docs/16` §6。
 - **K-28 开放**：无 HTTP 宿主，400/404/413 与资源边界无法端到端验证；宿主落地后另起 MINOR。
 - **K-02 锁定 1.0.0**：`parentChunkId` 删除、`structuralParentChunkId` 转必填。
 - **C-01 / C-02 / C-03**：类别枚举、特征产出方边界与 400 口径、`payload` 未排期；C-01 待 14 类实证。
@@ -101,11 +101,11 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 
 ### 任务 A：先把交接基线跑通
 
-1. 从 GitHub 克隆，确认 `HEAD` 含 0.10.0 与 docs/23。
-2. 跑 `dotnet test`（101 项）与三条门禁。
+1. 从 GitHub 克隆，确认 `HEAD` 含 0.10.1（K-15 已关闭，证据见 `docs/15` §6 与 `docs/16` §6）与 docs/23。
+2. 跑 `dotnet test`（104 项）与三条门禁。
 3. **任务 A 阶段不改 `contract/`**；基线跑通并经业主批准后，允许按第 8 节流程改契约——必须升版、跑三条门禁、同步 `impl/` 与测试。先读 `README.md`、`docs/00`、`docs/05`、`docs/11`、`docs/12`、`docs/14`、`docs/15`、`docs/17`、`docs/23`。
 
-**验收**：101/101 通过、三条门禁 PASS、`git status` 空。
+**验收**：104/104 通过、三条门禁 PASS、`git status` 空。
 
 ### 任务 B：补两份 P1 starter
 
@@ -199,7 +199,7 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 
 - [x] `origin/main` 已包含本次交接内容。2026-11-14 复核时 HEAD 为 `582bc39`，含 `HANDOFF.md`、`docs/21`、`docs/22-小循环首跑记录` 与 0.10.0 文档（包含并晚于 `4525aad`）。早先把这一项留空、当作尚未 push，对当前 GitHub `main` 已过时
 - [ ] `git status --porcelain` 为空
-- [ ] `dotnet test` 101/101
+- [ ] `dotnet test` 104/104
 - [ ] 三条门禁 PASS
 - [ ] Grok Bot 已读 `README.md`、`docs/05`、`docs/11`、`docs/12`
 - [ ] Grok Bot 已确认“14 类未冻结，不得改 contract”

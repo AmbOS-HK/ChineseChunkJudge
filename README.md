@@ -128,7 +128,7 @@ ChineseChunkJudge/
 
 修改顺序固定：**先改 `contract/`，再同步 `impl/`**。参考实现不得私自增删契约核心字段，也不得删除或降级基础校验规则。完整流程与提交规范见 `CONTRIBUTING.md`。
 
-当前契约版本 **0.10.0**：基础规则 CCJ-001..CCJ-021；0.2.0 落地双库产物 `ParentChildPackage`（默认关闭）与双父指针（`parentChunkId` 弃用保留至 1.0.0）；0.3.0 落地 Spec 侧 `ChunkRuleTemplate`（`/templates/resolve` 选型判定，强制 smart 兜底）与 CCJ-015 恰长硬切（error）；0.4.0 将 summary 的 `parentCoverageRatio` 更名为 `childWithParentRatio`（旧字段弃用保留至 1.0.0）；0.5.0 由 CCJ-008 补齐父块 ID / 配对 / pair 内子块的重复检测；0.6.0 再补齐跨父块悬空引用检测；0.7.0 新增 CCJ-016 切片标识唯一；0.7.1 固化 `MAJOR.MINOR.PATCH` 版本号规则（§12.1）；0.8.0 新增 `headingPath` 透传（C-17）与模板集选型 `/templates/resolve`（C-18）；0.9.0 新增 CCJ-017 标识与序号一致性（`chunkId={strategy}#{index}`、`index` 从 0 连续、`charCount` 与码位数一致）；0.10.0 新增 CCJ-018 策略名与选项一致（error）、CCJ-019 超 `maxChunkSize` 告警（warning）、CCJ-020 元信息等值（error）、CCJ-021 父块结构完整性（error，收编原 CCJ-010 的父块偏移多判），`strategy`/`chunkId` 的 5 处 pattern 收紧到 1..1500，报告增可选 `effectiveOptions`，错误码收为 5 码封闭枚举，新增 `POST /judge/contract-chunks`，normalize 明确「只归一化、不判定」。C# 参考实现已同步，`dotnet build` 0 警告 0 错误、101 项单元测试全部通过（2026-11-14 本地实测，含 0.10.0 四条新规则的 13 项正反用例与 6 处实现偏差回归用例，见 `docs/22`、`docs/23`；CI 每次 push / PR 自动复跑）。
+当前契约版本 **0.10.1**（K-15 PATCH 已在 main，关闭证据见 `docs/15` §6、`docs/16` §6）：基础规则 CCJ-001..CCJ-021；0.2.0 落地双库产物 `ParentChildPackage`（默认关闭）与双父指针（`parentChunkId` 弃用保留至 1.0.0）；0.3.0 落地 Spec 侧 `ChunkRuleTemplate`（`/templates/resolve` 选型判定，强制 smart 兜底）与 CCJ-015 恰长硬切（error）；0.4.0 将 summary 的 `parentCoverageRatio` 更名为 `childWithParentRatio`（旧字段弃用保留至 1.0.0）；0.5.0 由 CCJ-008 补齐父块 ID / 配对 / pair 内子块的重复检测；0.6.0 再补齐跨父块悬空引用检测；0.7.0 新增 CCJ-016 切片标识唯一；0.7.1 固化 `MAJOR.MINOR.PATCH` 版本号规则（§12.1）；0.8.0 新增 `headingPath` 透传（C-17）与模板集选型 `/templates/resolve`（C-18）；0.9.0 新增 CCJ-017 标识与序号一致性（`chunkId={strategy}#{index}`、`index` 从 0 连续、`charCount` 与码位数一致）；0.10.0 新增 CCJ-018 策略名与选项一致（error）、CCJ-019 超 `maxChunkSize` 告警（warning）、CCJ-020 元信息等值（error）、CCJ-021 父块结构完整性（error，收编原 CCJ-010 的父块偏移多判），`strategy`/`chunkId` 的 5 处 pattern 收紧到 1..1500，报告增可选 `effectiveOptions`，错误码收为 5 码封闭枚举，新增 `POST /judge/contract-chunks`，normalize 明确「只归一化、不判定」。0.10.1 将 `chunkMode` / `unitKind` / `severity` 收到单一 `$defs`，并把 `RuleDescriptor` 与 `appliedRule` 合并（纯结构收敛，不改判定行为）。C# 参考实现已同步，`dotnet build` 0 警告 0 错误、104 项单元测试全部通过（2026-11-14；0.10.0 落契时为 101 项，含四条新规则的 13 项正反用例与 6 处实现偏差回归用例，见 `docs/22`、`docs/23`；其后 A-05 空 traits 校验增至 104；CI 每次 push / PR 自动复跑）。
 
 ## 参考实现
 
@@ -183,7 +183,7 @@ Demo 会输出一份 `structure@600` 的样例 JudgeReport JSON；策略类型�
 
 ## 版本与发布
 
-- 契约版本 `0.10.0` 对应 tag `v0.10.0`；版本号规则见 `contract/rules.md` §12.1，三处（`rules.md` 表头、`openapi.yaml` 的 `info.version`、`ContractConstants.ContractVersion`）必须同值。
+- 当前契约版本是 `0.10.1`（K-15 PATCH，已在 main）。`0.10.0` 对应 tag `v0.10.0`；版本号规则见 `contract/rules.md` §12.1，三处（`rules.md` 表头、`openapi.yaml` 的 `info.version`、`ContractConstants.ContractVersion`）必须同值。
 - 三处同值由 `scripts/check_contract_version.py` 自动校验（`python scripts/check_contract_version.py`），CI 作业 `contract-version` 在每次 push / PR 时执行。
 - tag 只标注契约版本，不代表实现已稳定；`0.x` 阶段仍可能出现破坏性调整，弃用字段统一保留至 `1.0.0` 清理。
 
@@ -192,8 +192,8 @@ Demo 会输出一份 `structure@600` 的样例 JudgeReport JSON；策略类型�
 - 贡献流程、提交规范、PR 自查清单见 `CONTRIBUTING.md`；契约先行的顺序不可颠倒。
 - 安全问题按 `SECURITY.md` 私下报告，不要开公开 Issue。
 - 行为准则见 `CODE_OF_CONDUCT.md`；Issue 与 PR 模板在 `.github/` 下。
-- CI（`.github/workflows/ci.yml`）在 push 与 PR 到 `main` 时执行四类检查：`check_contract_version.py`（三处版本同值）、`check_contract_integrity.py`（Schema / `$ref` / 模板与产物样本结构）、`check_contract_bump.py`（PR 上校验"改契约必升版"，一次只升一个段），以及 `dotnet build` + `dotnet test`。登记的本地结果是 build 0 警告 0 错误、101 项测试通过（见上文与 `docs/22`、`docs/23`）。
-- 契约缺陷与整改状态见 `docs/15`；0.10.0 关闭结论以 `docs/15` §6 为准（证据见 `docs/23`），并与 `docs/24`、`HANDOFF.md` 一致。该节统计 25 项已关闭，其中包含 K-03、K-04、K-05、K-11（K-03..K-11 均已关闭）；K-15 未做；K-02 仍锁定 1.0.0，K-28 仍待宿主。14 类文档类别保持未冻结草案，只写在 `docs/05`、`docs/11`、`docs/12`。上文的 `dotnet test` 101/101 是 2026-11-14 的本地记录，本次文档对齐没有重跑该命令。
+- CI（`.github/workflows/ci.yml`）在 push 与 PR 到 `main` 时执行四类检查：`check_contract_version.py`（三处版本同值）、`check_contract_integrity.py`（Schema / `$ref` / 模板与产物样本结构）、`check_contract_bump.py`（PR 上校验"改契约必升版"，一次只升一个段），以及 `dotnet build` + `dotnet test`。当前基线为 build 0 警告 0 错误、104 项测试通过（0.10.0 落契时登记为 101，见 `docs/22`、`docs/23`；A-05 之后为 104）。
+- 契约缺陷与整改状态见 `docs/15`。现行关闭结论以 `docs/15` §6 为准（K-15 的关闭证据在 `docs/16` §6；0.10.0 批次的落地记录仍见 `docs/23`），并与 `docs/24`、`HANDOFF.md` 一致。该节统计 26 项已关闭，其中包含 K-03、K-04、K-05、K-11（K-03..K-11 均已关闭）以及 0.10.1 关闭的 K-15；K-02 仍锁定 1.0.0，K-28 仍待宿主。14 类文档类别保持未冻结草案，只写在 `docs/05`、`docs/11`、`docs/12`。当前 `dotnet test` 基线是 104/104（0.10.0 落契时的本地记录是 101/101，见 `docs/23`）。
 
 ## 许可
 
