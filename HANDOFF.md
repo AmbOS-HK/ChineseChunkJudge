@@ -5,24 +5,18 @@
 > 分支：`main`
 > 本文是 Grok Bot 的入口说明；`contract/` 是唯一权威，`docs/` 是规划与审查记录，不具契约效力。简明版入口见 `docs/24-交接说明-2026-11-14.md`；两者冲突时，以 `contract/` 与本文的“当前事实”为准。
 
-## 0. 交接前必做：先确认 GitHub 上是当前状态
+## 0. GitHub `main` 上的交接内容（2026-11-14 复核）
 
-截至 2026-11-14 11:55 实测：本地 `main` **领先 `origin/main` 8 个提交**。已两次尝试推送，均失败——一次 `Could not resolve host: github.com`，一次 `Failed to connect to github.com:443 after 22176 ms`。**`origin/main` 仍是 0.10.0 之前的版本，Grok Bot 此时从 GitHub 拉取拿不到本次交接内容。** 工作树另有 2 项未提交改动（`docs/21` 修改、`docs/22-小循环首跑记录` 新增），属 AEC.Chat 小循环作业线，不在本次交接范围。推送是否完成以业主实测 `git log origin/main..HEAD` 为准，不要照抄本文数字。
+2026-11-14 复核时，`origin/main` 的 HEAD 是 `582bc39`（`docs: 交接口径对齐——首轮不改契约、Bench 任务标注为仓外`），与当时核对的本地 `main` 相同：`git rev-list --count origin/main..HEAD` 为 0。这个提交已经包含 `HANDOFF.md`、`docs/21-AEC.Chat小循环构建方案-2026-11-14.md`、`docs/22-小循环首跑记录-2026-11-14.md`，以及 0.10.0 文档线。
 
-交接前由业主执行：
+下面这些句子是推送完成前的过程记录，对当前 GitHub `main` 已经过时，不要再当成现状：本地 `main` 曾领先 `origin/main` 8 个提交；两次推送分别因 `Could not resolve host: github.com` 与 `Failed to connect to github.com:443 after 22176 ms` 失败；当时的 `origin/main` 还停在 0.10.0 之前，从 GitHub 拉取拿不到交接内容；工作树曾有未提交的 `docs/21` 修改和新增的 `docs/22-小循环首跑记录`。这些内容现在都在 `origin/main` 上。
 
-```powershell
-$g = "C:\Program Files\Git\cmd\git.exe"
-& $g -C "D:\ChineseChunkJudge" status --porcelain          # 应为空
-& $g -C "D:\ChineseChunkJudge" log --oneline origin/main..HEAD
-& $g -C "D:\ChineseChunkJudge" push origin main
-& $g -C "D:\ChineseChunkJudge" log --oneline origin/main..HEAD   # 应为空
-```
-
-未推送提交的数量与 SHA **不在本文写死**（每提交一次就变）。以命令结果为准：
+以后若本地又领先远端，提交数量和 SHA 以命令为准，不要照抄本节的 `582bc39`：
 
 ```powershell
-git -C "D:\ChineseChunkJudge" rev-list --oneline origin/main..HEAD
+git -C "D:\ChineseChunkJudge" fetch origin
+git -C "D:\ChineseChunkJudge" rev-list --count origin/main..HEAD   # 为 0 表示没有未推送提交
+git -C "D:\ChineseChunkJudge" status --porcelain                   # 为空表示工作树干净
 ```
 
 > 口径提示：`docs/23` §6 末行原记“工作树仍未 git commit”，该文件已自行更正为“后续已提交为 `42dca21`，现状以 `git status` 为准”。本文不再重复该警告。
@@ -46,7 +40,7 @@ git -C "D:\ChineseChunkJudge" rev-list --oneline origin/main..HEAD
 | C# 参考实现 | `impl/csharp`，`net10.0`；`dotnet test` **101/101**，build 0 警告 0 错误 |
 | 契约门禁 | `check_contract_version.py` PASS；`check_contract_integrity.py` PASS；`check_contract_bump.py --self-test` 9/9 |
 | CI | `.github/workflows/ci.yml`：版本 / 结构 / 升版守门 + build + test |
-| 模板 | `templates/recommended` 6 份 starter，均 `0.1.0`、未标定、不得自动加载 |
+| 模板 | `templates/recommended` 6 份 `*-starter`，均 `0.1.0`、未标定、不得自动加载。同目录另有首稿 `aec-law-v1.json`、`aec-plans-v1.json`（判定单 V1.0 的机器可读草案，`0.1.0`，非冻结默认；小循环未在本仓实施；不得自动加载） |
 | 类别枚举 | **14 类模板族草案，未冻结**；见 `docs/05` §2、`docs/11`、`docs/12` |
 | 远端 | `origin = https://github.com/AmbOS-HK/ChineseChunkJudge.git` |
 
@@ -86,6 +80,7 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 - `other` 仅 fallback，不建 starter。
 - 文件名/templateId 旧名：`engineering_project_report.json`、`judicial_document.json`；`appliesTo` 已用新类别值。
 - 企业非项目工作报告暂无主类，落 `other`；是否新增 `enterprise_report` 待语料占比。
+- 首稿草案（不是上面 6 份 starter 的改写）：`templates/recommended/aec-law-v1.json`、`aec-plans-v1.json`。它们只编码《切片判定单（V1.0）》的决策分支，小循环尚未在本仓实施，不得自动加载。
 
 ### 4.2 Bench（独立仓，尚未接入）
 
@@ -191,7 +186,7 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 - `docs/05`：14 类草案
 - `docs/11`：结构效度与实证门槛
 - `docs/12`：类别→模板 / Bench 映射
-- `templates/recommended/`
+- `templates/recommended/`：6 份 `*-starter`，以及首稿 `aec-law-v1.json`、`aec-plans-v1.json`（草案，非冻结默认，未接入小循环）
 
 **历史与台账**：
 
@@ -202,7 +197,7 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 
 ## 8. 交接确认清单
 
-- [ ] `origin/main` 已包含交接时本地 `HEAD` 及之前全部提交（本次交接至少应包含 `4525aad`）
+- [x] `origin/main` 已包含本次交接内容。2026-11-14 复核时 HEAD 为 `582bc39`，含 `HANDOFF.md`、`docs/21`、`docs/22-小循环首跑记录` 与 0.10.0 文档（包含并晚于 `4525aad`）。早先把这一项留空、当作尚未 push，对当前 GitHub `main` 已过时
 - [ ] `git status --porcelain` 为空
 - [ ] `dotnet test` 101/101
 - [ ] 三条门禁 PASS
@@ -229,13 +224,13 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 2. 若以**仓库管理员**身份：`enforce_admins=false` 使其可绕过上述限制直接推送。
 3. `contract-integrity`、`contract-bump` 两个作业**尚未登记为必需检查**：会执行、会红，但不阻断合并。是否登记为必需由业主决定，**Bot 不要自行修改仓库设置**。
 
-## 10. 交接就绪判定（推送是前置条件）
+## 10. 交接就绪判定
 
-GitHub 上没有的提交，Bot 克隆就看不到。判定“可交接”只看两条命令，不看任何文档里的数字：
+2026-11-14 复核时，GitHub `main` 已是 `582bc39`，`origin/main..HEAD` 为 0，`HANDOFF.md` 与 0.10.0 文档已在远端。本地是否又领先远端，仍只看命令，不看文档里的旧数字：
 
 ```powershell
 git -C "D:\ChineseChunkJudge" fetch origin
-git -C "D:\ChineseChunkJudge" rev-list --count origin/main..HEAD   # 必须为 0
+git -C "D:\ChineseChunkJudge" rev-list --count origin/main..HEAD   # 为 0 表示没有未推送提交
 git -C "D:\ChineseChunkJudge" status --porcelain                   # 必须为空
 ```
 

@@ -1,0 +1,49 @@
+{
+  "templateId": "aec-plans-v1",
+  "version": "0.1.0",
+  "name": "AEC 规划文本切片模板首稿（判定单 V1.0 草案，非冻结默认）",
+  "appliesTo": {
+    "documentCategories": ["government_plan"],
+    "traits": ["article_numbering", "section_numbering", "weak_structure", "dense_table"]
+  },
+  "decision": {
+    "rules": [
+      {
+        "traits": ["dense_table"],
+        "chunkMode": "smart",
+        "chunkSize": 1500
+      },
+      {
+        "traits": ["article_numbering"],
+        "chunkMode": "regex",
+        "pattern": "(?=第[一二三四五六七八九十百零〇0-9]+[条章])",
+        "chunkSize": 1200,
+        "forbidLineStartAnchor": true,
+        "forbidHeadingSplit": true,
+        "preserveSeparator": true
+      },
+      {
+        "traits": ["section_numbering"],
+        "chunkMode": "regex",
+        "pattern": "(?=（[一二三四五六七八九十]+）)",
+        "chunkSize": 1200,
+        "forbidLineStartAnchor": true,
+        "forbidHeadingSplit": true,
+        "preserveSeparator": true
+      },
+      {
+        "traits": ["weak_structure"],
+        "chunkMode": "smart",
+        "chunkSize": 1000
+      }
+    ],
+    "fallback": {
+      "chunkMode": "smart",
+      "chunkSize": 1000
+    }
+  },
+  "validation": {
+    "hardCutZero": true,
+    "acceptanceRef": "aec-27q"
+  }
+}
