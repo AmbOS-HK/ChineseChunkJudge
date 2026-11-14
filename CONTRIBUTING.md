@@ -17,7 +17,7 @@
 
 ## 2. 版本号
 
-格式固定为 `MAJOR.MINOR.PATCH`，三处必须同值：`contract/rules.md` 表头、`contract/openapi.yaml` 的 `info.version`、C# 的 `ContractConstants.ContractVersion`。当前三处均为 `0.9.0`（2026-11-14 核对）。
+格式固定为 `MAJOR.MINOR.PATCH`，三处必须同值：`contract/rules.md` 表头、`contract/openapi.yaml` 的 `info.version`、C# 的 `ContractConstants.ContractVersion`。当前三处均为 `0.10.1`（2026-11-14，K-15 PATCH 已在 main）。
 
 一次变更只递增一个段；同一批次同时含 minor 与 patch 性质时取较高位。0.x 阶段同样适用。判定表见 `contract/rules.md` §12.1。
 
@@ -46,7 +46,7 @@ python scripts/check_contract_bump.py --base HEAD~1        # 本地提交后自�
 ```powershell
 cd impl/csharp
 dotnet build      # 期望 0 警告 0 错误
-dotnet test       # 当前 101 项，全通过
+dotnet test       # 当前 104 项，全通过
 ```
 
 契约结构检查（Schema 可解析、`$ref` 无悬空、模板与产物样本合规）：
