@@ -1,7 +1,7 @@
 # 21 AEC.Chat 小循环构建方案（2026-11-14）
 
 - 状态：**方案，未实施**。本轮不改 `contract/`、不改 `impl/`、不改 `templates/`。
-- 依据：`contract/`（现行 0.9.0）、`docs/08`（模板生产线）、`docs/12`（类别→模板→Bench 映射）、`docs/14`（K-28 无 HTTP 宿主）、`docs/18`、AEC.Chat `Law/_src/bailian/切片判定单.md` 与建库脚本、`D:\ChunkJudgeBench\HANDOFF.md`。
+- 依据：`contract/`（现行 0.10.0，CCJ-018..021 已生效）、`docs/08`（模板生产线）、`docs/12`（类别→模板→Bench 映射）、`docs/14`（K-28 无 HTTP 宿主）、`docs/18`、AEC.Chat `Law/_src/bailian/切片判定单.md` 与建库脚本、`D:\ChunkJudgeBench\HANDOFF.md`、`docs/22`（首跑记录）。
 - 约束：本文只定义流程与接口形态，不新增契约条目；所有"当前不可用"的判断均给出证据位置。
 
 ## 0. 一句话
@@ -231,7 +231,7 @@ AEC 的 `region / admin_level / year / plan_period` 留在 AEC 侧做检索过�
 | **P2 Bench 接外部切片** | `load_chunks_jsonl` + `evaluate_chunks` + `--chunks` | 对同一批块，"外部切片"与"内置同参数策略"的边界/单元指标可对照；`documentCategory` 缺失时报告标红 |
 | **P3 接回大循环** | 小循环通过后才允许导入；大循环仍保留 27 问 | 一批被小循环拦下时，百炼库内不出现该文档 |
 
-前置依赖必须写清楚：`0.10.0` **尚未落契**（CCJ-018..021 未生效）、`docs/20` 的 P1–P6 仍在施工、无 HTTP 宿主。因此 **P1 首版走"库内引用 Core"，不要假设 `/judge` 可用**。
+前置依赖必须写清楚：HTTP 宿主仍未落地（`docs/14` K-28），`docs/20` 的 P1–P6 只落地了部分承载（规则清单、`effectiveOptions`、CCJ-018..021 已在库中）。因此 **P1 首版走"库内引用 Core"的 CLI，不要假设 `/judge` 可用**；该 CLI 已建成并跑通，见 `docs/22`。
 
 ## 8. 缺口清单（带证据）
 

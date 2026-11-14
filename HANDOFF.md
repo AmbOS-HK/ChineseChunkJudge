@@ -19,17 +19,13 @@ $g = "C:\Program Files\Git\cmd\git.exe"
 & $g -C "D:\ChineseChunkJudge" log --oneline origin/main..HEAD   # 应为空
 ```
 
-当前领先的 7 个提交（以实际 `git log` 为准）：
+未推送提交的数量与 SHA **不在本文写死**（每提交一次就变）。以命令结果为准：
 
-- `4525aad` docs: 增加交接给 Grok Bot 的 HANDOFF
-- `6f71326` docs: 新增交接说明（docs/24），面向接手代理
-- `42dca21` docs: 契约审查、整改台账与 0.10.0 落契全套记录（docs/14–23）
-- `6656eca` chore(ci): 契约门禁扩展——完整性检查覆盖产物样本、新增升版校验、CI 四作业
-- `5299a4a` feat(contract): 0.10.0 契约收口，新增 CCJ-018..021
-- `54d4913` docs: 仓库四项设置已处理完毕，补记处理结果与效力边界
-- `ce870f4` docs: documentation 链接已修复，记录其实际跟随 homepage 的机制
+```powershell
+git -C "D:\ChineseChunkJudge" rev-list --oneline origin/main..HEAD
+```
 
-> **不要相信 `docs/23` §6 最后一行**“工作树仍未 git commit”。那是落契当时的记录；实际状态以 `git status` 为准，当前已提交且工作树干净。
+> 口径提示：`docs/23` §6 末行原记“工作树仍未 git commit”，该文件已自行更正为“后续已提交为 `42dca21`，现状以 `git status` 为准”。本文不再重复该警告。
 
 ## 1. 项目定位
 
@@ -208,3 +204,34 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 - [ ] Grok Bot 已读 `README.md`、`docs/05`、`docs/11`、`docs/12`
 - [ ] Grok Bot 已确认“14 类未冻结，不得改 contract”
 - [ ] Grok Bot 已确认 Bench 是独立仓，不在本仓改评测逻辑
+
+## 9. 仓库级设置与合并权限（2026-11-14 实测）
+
+以下设置存在于 GitHub 仓库设置，**不在 Git 跟踪范围内**，克隆拿不到，故在此登记。取值均为 API 回读值，不是推测：
+
+| 项 | 实际值 |
+| --- | --- |
+| 仓库描述 | 面向中文专业文档的切片质检与判定契约框架，插件化接入任意底层切分器，不内置切分算法 |
+| Topics | `chinese`、`chunking`、`csharp`、`dotnet`、`json-schema`、`nlp`、`openapi`、`rag` |
+| Website 与文档链接 | 两者同为 `https://github.com/AmbOS-HK/ChineseChunkJudge/tree/main/docs`。机制：`documentation` 字段跟随 `homepage`，直接 `PATCH` 该字段会被静默忽略 |
+| `main` 分支保护 | 要求走 PR；必需状态检查 2 项；`strict=true`（分支须与最新 `main` 同步）；禁强推、禁删分支；`enforce_admins=false` |
+
+已登记为**必需**的检查只有两项：`contract version (3 places must match)`、`build & test (net10.0)`。
+
+对 Grok Bot 的直接影响：
+
+1. 若以**非管理员**身份（独立账号或 GitHub App）推送：`git push origin main` 会被拒，必须开 PR 合入，且 PR 需上述两项检查通过。
+2. 若以**仓库管理员**身份：`enforce_admins=false` 使其可绕过上述限制直接推送。
+3. `contract-integrity`、`contract-bump` 两个作业**尚未登记为必需检查**：会执行、会红，但不阻断合并。是否登记为必需由业主决定，**Bot 不要自行修改仓库设置**。
+
+## 10. 交接就绪判定（推送是前置条件）
+
+GitHub 上没有的提交，Bot 克隆就看不到。判定“可交接”只看两条命令，不看任何文档里的数字：
+
+```powershell
+git -C "D:\ChineseChunkJudge" fetch origin
+git -C "D:\ChineseChunkJudge" rev-list --count origin/main..HEAD   # 必须为 0
+git -C "D:\ChineseChunkJudge" status --porcelain                   # 必须为空
+```
+
+<div align="left">注：曾出现过本机到 `github.com:443` 间歇不可达、而 `api.github.com` 正常的情况，此时 `git push` 会连续超时。这不是仓库问题，恢复后重推即可；不要改用无关通道或改写历史绕过。</div>
