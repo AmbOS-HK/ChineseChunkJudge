@@ -127,7 +127,8 @@ public sealed record ChunkStrategyOptions
     /// <summary>切分方式（regex / smart / page），由模板决策回填；page 模式豁免 CCJ-015。</summary>
     public string? ChunkMode { get; init; }
 
-    /// <summary>契约策略名：{type}@{targetSize}。</summary>
+    /// <summary>契约策略名：{type}@{targetSize}。由 strategyType 与 targetSize 派生，不是 Schema 字段。</summary>
+    [JsonIgnore]
     public string StrategyName => $"{StrategyType}@{TargetSize}";
 }
 

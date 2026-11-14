@@ -46,7 +46,7 @@ python scripts/check_contract_bump.py --base HEAD~1        # 本地提交后自�
 ```powershell
 cd impl/csharp
 dotnet build      # 期望 0 警告 0 错误
-dotnet test       # 当前 104 项，全通过
+dotnet test       # 当前 122 项（Core 104 + CLI 18），全通过
 ```
 
 契约结构检查（Schema 可解析、`$ref` 无悬空、模板与产物样本合规）：

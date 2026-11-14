@@ -32,7 +32,7 @@
 
 ## AEC 判定单首稿（草案）
 
-同目录另有两份首稿，放在这里是为了走现有的 `templates/recommended/*.json` 结构校验。它们不是上表 6 份 `*-starter` 的改写，也不是冻结的生产默认。`version` 为 `0.1.0`；`templateId` 里的 `v1` 只表示对应《切片判定单（V1.0）》。宿主、`TemplateResolver` 与 Demo 不得自动加载。选型 → 百炼实切 → 回拉切片 → 判定这条小循环尚未在本仓实施。
+同目录另有两份首稿，放在这里是为了走现有的 `templates/recommended/*.json` 结构校验。它们不是上表 6 份 `*-starter` 的改写，也不是冻结的生产默认。`version` 为 `0.1.0`；`templateId` 里的 `v1` 只表示对应《切片判定单（V1.0）》。宿主、`TemplateResolver`、Demo 与进程内 CLI 不得自动加载。选型 → 百炼实切 → 回拉切片 → 判定这条小循环尚未在本仓实施；CLI 只提供文件进出的判定入口。
 
 分隔符按判定单原文抄录，正则规则不带 `^` 多行锚（`forbidLineStartAnchor: true`）。`smart` 表示判定单里的「智能切分、不传 chunk-mode」。未命中任何规则时走该模板的 `fallback`，不允许空决策。`pdf_no_structure` 没有单独规则，因此落到 fallback；页模式 PDF 不作为契约判定路径，两份模板都没有 `chunkMode=page`。AEC 检索字段 `region`、`admin_level`、`year`、`plan_period` 不进入契约 `document.metadata`。
 

@@ -37,7 +37,8 @@ git -C "D:\ChineseChunkJudge" status --porcelain                   # 为空表�
 | --- | --- |
 | 契约版本 | **0.10.1**（K-15 PATCH），三处同值：`contract/rules.md` 表头、`contract/openapi.yaml` `info.version`、C# `ContractConstants.ContractVersion` |
 | 基础规则 | **CCJ-001..CCJ-021**，默认注册 **21 条** |
-| C# 参考实现 | `impl/csharp`，`net10.0`；`dotnet test` **104/104**，build 0 警告 0 错误 |
+| C# 参考实现 | `impl/csharp`，`net10.0`；`dotnet test` **122/122**（Core 104 + CLI 18），build 0 警告 0 错误 |
+| 进程内 CLI | `impl/csharp/src/ChineseChunkJudge.Cli`（程序集 `ccj`）。`judge` / `resolve` / `rules` 文件进出，只引用 Core。不是 HTTP 宿主 |
 | 契约门禁 | `check_contract_version.py` PASS；`check_contract_integrity.py` PASS；`check_contract_bump.py --self-test` 9/9 |
 | CI | `.github/workflows/ci.yml`：版本 / 结构 / 升版守门 + build + test |
 | 模板 | `templates/recommended` 6 份 `*-starter`，均 `0.1.0`、未标定、不得自动加载。同目录另有首稿 `aec-law-v1.json`、`aec-plans-v1.json`（判定单 V1.0 的机器可读草案，`0.1.0`，非冻结默认；小循环未在本仓实施；不得自动加载） |
@@ -102,10 +103,10 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 ### 任务 A：先把交接基线跑通
 
 1. 从 GitHub 克隆，确认 `HEAD` 含 0.10.1（K-15 已关闭，证据见 `docs/15` §6 与 `docs/16` §6）与 docs/23。
-2. 跑 `dotnet test`（104 项）与三条门禁。
+2. 跑 `dotnet test`（当前 122 项：Core 104 + CLI 18）与三条门禁。
 3. **任务 A 阶段不改 `contract/`**；基线跑通并经业主批准后，允许按第 8 节流程改契约——必须升版、跑三条门禁、同步 `impl/` 与测试。先读 `README.md`、`docs/00`、`docs/05`、`docs/11`、`docs/12`、`docs/14`、`docs/15`、`docs/17`、`docs/23`。
 
-**验收**：104/104 通过、三条门禁 PASS、`git status` 空。
+**验收**：122/122 通过、三条门禁 PASS、`git status` 空。
 
 ### 任务 B：补两份 P1 starter
 
@@ -199,7 +200,7 @@ python D:\ChineseChunkJudge\scripts\check_contract_bump.py --self-test
 
 - [x] `origin/main` 已包含本次交接内容。2026-11-14 复核时 HEAD 为 `582bc39`，含 `HANDOFF.md`、`docs/21`、`docs/22-小循环首跑记录` 与 0.10.0 文档（包含并晚于 `4525aad`）。早先把这一项留空、当作尚未 push，对当前 GitHub `main` 已过时
 - [ ] `git status --porcelain` 为空
-- [ ] `dotnet test` 104/104
+- [ ] `dotnet test` 122/122
 - [ ] 三条门禁 PASS
 - [ ] Grok Bot 已读 `README.md`、`docs/05`、`docs/11`、`docs/12`
 - [ ] Grok Bot 已确认“14 类未冻结，不得改 contract”
@@ -235,3 +236,28 @@ git -C "D:\ChineseChunkJudge" status --porcelain                   # 必须为�
 ```
 
 > 注：曾出现过本机到 `github.com:443` 间歇不可达、而 `api.github.com` 正常的情况，此时 `git push` 会连续超时。这不是仓库问题，恢复后重推即可；**不要改用无关通道或改写历史绕过**。
+
+## 11. 进程内 CLI（小循环准备）
+
+`impl/csharp/src/ChineseChunkJudge.Cli`（程序集 `ccj`）是仓内入口，替代仓库外的 Plugins `ccj-cli`。它项目引用 Core，用 JSON 文件调用判定、选型与规则清单。不启动 HTTP，不实现 K-28，也不假定任何 HTTP 端点可用。
+
+不自动加载 `templates/recommended/aec-law-v1.json` 或 `aec-plans-v1.json`。这两份首稿仍是 `0.1.0`、未冻结。调用方把模板放进 resolve 请求的 `template` 或 `templates`。`samples/cli/` 是合成短文，不是语料。
+
+```powershell
+cd impl/csharp
+dotnet build ChineseChunkJudge.sln
+dotnet test ChineseChunkJudge.sln
+
+dotnet run --project src/ChineseChunkJudge.Cli -- judge `
+  --in samples/cli/judge-request.sample.json `
+  --out "$env:TEMP\synthetic.report.json"
+
+dotnet run --project src/ChineseChunkJudge.Cli -- resolve `
+  --in samples/cli/resolve-request.sample.json `
+  --out "$env:TEMP\synthetic.decision.json"
+
+dotnet run --project src/ChineseChunkJudge.Cli -- rules `
+  --out "$env:TEMP\rules.json"
+```
+
+已知偏移风险：百炼 chunk list 不返回字符偏移。调用方必须自行提供与正文一致的 `startOffset` / `endOffset`。不要把切片文本拼回正文去满足 CCJ-005。覆盖率低于 100% 时，报告里的 `passed=true` 只说明已提交的块没有 error，属于部分覆盖，不是全量通过。本命令不新增 region、year 或 offset 契约字段。
